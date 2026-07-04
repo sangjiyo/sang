@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "gdb-multiarch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/kernel/kernel-qemu.elf",
+            "stopAtEntry": true,
+            "cwd": "${workspaceFolder}",
+            "miDebuggerServerAddress": "127.0.0.1:26000",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb-multiarch",
+            "setupCommands": [
+                {
+                    "text": "set architecture riscv:rv64", // 明确目标架构，适配寄存器显示；若 32 位则为 "riscv:rv32"
+                    "ignoreFailures": false
+                },
+                //在这里加载了寄存器信息表
+                {
+                    "text": "set tdesc filename registers.xml",
+                },
+                {
+                    "description": "Enable RISC - V register display",
+                    "text": "maintenance packet registers", // 让 GDB 识别 RISC - V 寄存器的指令（部分环境可能需调整）
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

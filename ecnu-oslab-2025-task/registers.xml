@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<!DOCTYPE target SYSTEM "gdb-target.dtd">
+<target>
+  <!-- 1. 核心通用寄存器（RISCV 64位必备，调试最常用） -->
+  <feature name="org.gnu.gdb.riscv.cpu">
+    <reg name="zero" bitsize="64" type="int" regnum="0"/>   <!-- 恒零寄存器 -->
+    <reg name="ra" bitsize="64" type="code_ptr" regnum="1"/> <!-- 返回地址寄存器 -->
+    <reg name="sp" bitsize="64" type="data_ptr" regnum="2"/> <!-- 栈指针寄存器 -->
+    <reg name="gp" bitsize="64" type="data_ptr" regnum="3"/> <!-- 全局指针寄存器 -->
+    <reg name="tp" bitsize="64" type="data_ptr" regnum="4"/> <!-- 线程指针寄存器 -->
+    <reg name="t0" bitsize="64" type="int" regnum="5"/>      <!-- 临时寄存器t0 -->
+    <reg name="t1" bitsize="64" type="int" regnum="6"/>      <!-- 临时寄存器t1 -->
+    <reg name="t2" bitsize="64" type="int" regnum="7"/>      <!-- 临时寄存器t2 -->
+    <reg name="fp" bitsize="64" type="data_ptr" regnum="8"/> <!-- 帧指针寄存器（s0别名） -->
+    <reg name="s1" bitsize="64" type="int" regnum="9"/>      <!-- 保存寄存器s1 -->
+    <reg name="a0" bitsize="64" type="int" regnum="10"/>     <!-- 参数/返回值寄存器a0 -->
+    <reg name="a1" bitsize="64" type="int" regnum="11"/>     <!-- 参数/返回值寄存器a1 -->
+    <reg name="a2" bitsize="64" type="int" regnum="12"/>     <!-- 参数寄存器a2 -->
+    <reg name="a3" bitsize="64" type="int" regnum="13"/>     <!-- 参数寄存器a3 -->
+    <reg name="a4" bitsize="64" type="int" regnum="14"/>     <!-- 参数寄存器a4 -->
+    <reg name="a5" bitsize="64" type="int" regnum="15"/>     <!-- 参数寄存器a5 -->
+    <reg name="a6" bitsize="64" type="int" regnum="16"/>     <!-- 参数寄存器a6 -->
+    <reg name="a7" bitsize="64" type="int" regnum="17"/>     <!-- 参数寄存器a7 -->
+    <reg name="s2" bitsize="64" type="int" regnum="18"/>     <!-- 保存寄存器s2 -->
+    <reg name="s3" bitsize="64" type="int" regnum="19"/>     <!-- 保存寄存器s3 -->
+    <reg name="s4" bitsize="64" type="int" regnum="20"/>     <!-- 保存寄存器s4 -->
+    <reg name="s5" bitsize="64" type="int" regnum="21"/>     <!-- 保存寄存器s5 -->
+    <reg name="s6" bitsize="64" type="int" regnum="22"/>     <!-- 保存寄存器s6 -->
+    <reg name="s7" bitsize="64" type="int" regnum="23"/>     <!-- 保存寄存器s7 -->
+    <reg name="s8" bitsize="64" type="int" regnum="24"/>     <!-- 保存寄存器s8 -->
+    <reg name="s9" bitsize="64" type="int" regnum="25"/>     <!-- 保存寄存器s9 -->
+    <reg name="s10" bitsize="64" type="int" regnum="26"/>    <!-- 保存寄存器s10 -->
+    <reg name="s11" bitsize="64" type="int" regnum="27"/>    <!-- 保存寄存器s11 -->
+    <reg name="t3" bitsize="64" type="int" regnum="28"/>     <!-- 临时寄存器t3 -->
+    <reg name="t4" bitsize="64" type="int" regnum="29"/>     <!-- 临时寄存器t4 -->
+    <reg name="t5" bitsize="64" type="int" regnum="30"/>     <!-- 临时寄存器t5 -->
+    <reg name="t6" bitsize="64" type="int" regnum="31"/>     <!-- 临时寄存器t6 -->
+    <reg name="pc" bitsize="64" type="code_ptr" regnum="32"/> <!-- 程序计数器（调试核心） -->
+  </feature>
+
+  <!-- 2. 基础FPU寄存器（浮点调试必备，保留常用浮点寄存器+控制寄存器） -->
+  <feature name="org.gnu.gdb.riscv.fpu">
+    <!-- 浮点寄存器类型定义（支持单/双精度） -->
+    <union id="riscv_double">
+      <field name="float" type="ieee_single"/>  <!-- 单精度浮点视图 -->
+      <field name="double" type="ieee_double"/> <!-- 双精度浮点视图 -->
+    </union>
+
+    <!-- 浮点临时寄存器（ft0-ft11） -->
+    <reg name="ft0" bitsize="64" type="riscv_double" regnum="33"/>
+    <reg name="ft1" bitsize="64" type="riscv_double" regnum="34"/>
+    <reg name="ft2" bitsize="64" type="riscv_double" regnum="35"/>
+    <reg name="ft3" bitsize="64" type="riscv_double" regnum="36"/>
+    <reg name="ft4" bitsize="64" type="riscv_double" regnum="37"/>
+    <reg name="ft5" bitsize="64" type="riscv_double" regnum="38"/>
+    <reg name="ft6" bitsize="64" type="riscv_double" regnum="39"/>
+    <reg name="ft7" bitsize="64" type="riscv_double" regnum="40"/>
+    <reg name="ft8" bitsize="64" type="riscv_double" regnum="61"/>
+    <reg name="ft9" bitsize="64" type="riscv_double" regnum="62"/>
+    <reg name="ft10" bitsize="64" type="riscv_double" regnum="63"/>
+    <reg name="ft11" bitsize="64" type="riscv_double" regnum="64"/>
+
+    <!-- 浮点保存寄存器（fs0-fs11） -->
+    <reg name="fs0" bitsize="64" type="riscv_double" regnum="41"/>
+    <reg name="fs1" bitsize="64" type="riscv_double" regnum="42"/>
+    <reg name="fs2" bitsize="64" type="riscv_double" regnum="51"/>
+    <reg name="fs3" bitsize="64" type="riscv_double" regnum="52"/>
+    <reg name="fs4" bitsize="64" type="riscv_double" regnum="53"/>
+    <reg name="fs5" bitsize="64" type="riscv_double" regnum="54"/>
+    <reg name="fs6" bitsize="64" type="riscv_double" regnum="55"/>
+    <reg name="fs7" bitsize="64" type="riscv_double" regnum="56"/>
+    <reg name="fs8" bitsize="64" type="riscv_double" regnum="57"/>
+    <reg name="fs9" bitsize="64" type="riscv_double" regnum="58"/>
+    <reg name="fs10" bitsize="64" type="riscv_double" regnum="59"/>
+    <reg name="fs11" bitsize="64" type="riscv_double" regnum="60"/>
+
+    <!-- 浮点参数/返回值寄存器（fa0-fa7） -->
+    <reg name="fa0" bitsize="64" type="riscv_double" regnum="43"/>
+    <reg name="fa1" bitsize="64" type="riscv_double" regnum="44"/>
+    <reg name="fa2" bitsize="64" type="riscv_double" regnum="45"/>
+    <reg name="fa3" bitsize="64" type="riscv_double" regnum="46"/>
+    <reg name="fa4" bitsize="64" type="riscv_double" regnum="47"/>
+    <reg name="fa5" bitsize="64" type="riscv_double" regnum="48"/>
+    <reg name="fa6" bitsize="64" type="riscv_double" regnum="49"/>
+    <reg name="fa7" bitsize="64" type="riscv_double" regnum="50"/>
+
+    <!-- FPU控制状态寄存器（调试浮点异常必备） -->
+    <reg name="fflags" bitsize="32" type="int" regnum="66"/> <!-- 浮点标志（异常状态） -->
+    <reg name="frm" bitsize="32" type="int" regnum="67"/>    <!-- 浮点舍入模式 -->
+    <reg name="fcsr" bitsize="32" type="int" regnum="68"/>   <!-- 浮点控制状态寄存器（fflags+frm） -->
+  </feature>
+
+  <!-- 3. 核心CSR（控制状态寄存器，调试中断、异常、特权级必备） -->
+  <feature name="org.gnu.gdb.riscv.csr">
+    <!-- 用户态（U-mode）核心CSR -->
+    <reg name="ustatus" bitsize="64" type="int" regnum="69"/>  <!-- 用户态状态寄存器 -->
+    <reg name="utvec" bitsize="64" type="int" regnum="71"/>    <!-- 用户态异常向量表基址 -->
+    <reg name="uepc" bitsize="64" type="int" regnum="73"/>     <!-- 用户态异常返回地址 -->
+    <reg name="ucause" bitsize="64" type="int" regnum="74"/>   <!-- 用户态异常原因 -->
+    <reg name="utval" bitsize="64" type="int" regnum="75"/>    <!-- 用户态异常关联值（如地址） -->
+
+    <!-- 监管态（S-mode，OS内核常用）核心CSR -->
+    <reg name="sstatus" bitsize="64" type="int" regnum="144"/> <!-- 监管态状态寄存器 -->
+    <reg name="stvec" bitsize="64" type="int" regnum="148"/>   <!-- 监管态异常向量表基址 -->
+    <reg name="sepc" bitsize="64" type="int" regnum="151"/>    <!-- 监管态异常返回地址 -->
+    <reg name="scause" bitsize="64" type="int" regnum="152"/>  <!-- 监管态异常原因 -->
+    <reg name="stval" bitsize="64" type="int" regnum="153"/>   <!-- 监管态异常关联值 -->
+    <reg name="satp" bitsize="64" type="int" regnum="155"/>    <!-- 监管态地址转换寄存器（分页核心） -->
+
+    <!-- 机器态（M-mode，底层硬件/bootloader常用）核心CSR -->
+    <reg name="mhartid" bitsize="64" type="int" regnum="159"/> <!-- 机器态硬件线程ID -->
+    <reg name="mstatus" bitsize="64" type="int" regnum="160"/> <!-- 机器态状态寄存器 -->
+    <reg name="misa" bitsize="64" type="int" regnum="161"/>    <!-- 机器态指令集架构信息 -->
+    <reg name="mtvec" bitsize="64" type="int" regnum="165"/>   <!-- 机器态异常向量表基址 -->
+    <reg name="mepc" bitsize="64" type="int" regnum="168"/>    <!-- 机器态异常返回地址 -->
+    <reg name="mcause" bitsize="64" type="int" regnum="169"/>  <!-- 机器态异常原因 -->
+    <reg name="mtval" bitsize="64" type="int" regnum="170"/>   <!-- 机器态异常关联值 -->
+
+    <!-- 基础性能计数器（仅保留常用，删除扩展hpmcounter） -->
+    <reg name="cycle" bitsize="64" type="int" regnum="80"/>    <!-- 总周期数计数器 -->
+    <reg name="time" bitsize="64" type="int" regnum="81"/>     <!-- 时间计数器（通常关联实时时钟） -->
+    <reg name="instret" bitsize="64" type="int" regnum="82"/>  <!-- 已执行指令数计数器 -->
+  </feature>
+
+  <!-- 4. 虚拟寄存器（调试特权级查看必备） -->
+  <feature name="org.gnu.gdb.riscv.virtual">
+    <reg name="priv" bitsize="64" type="int" regnum="309"/> <!-- 当前特权级（U/S/M） -->
+  </feature>
+</target>

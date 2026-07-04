@@ -1,0 +1,19 @@
+{
+    "C_Cpp.errorSquiggles": "disabled",
+    "search.exclude": {
+        "**/.git": true
+    },
+    //新增的隐藏Git相关配置
+    "files.exclude": {
+        "**/.git": true,
+        "**/.gitattributes": true,
+        "**/.github": true,
+        "**/.gitmodules": true
+    },
+    "git.enabled": true,
+    "git.showCommitInput": true,
+    "git.autofetch": true,
+    "scm.alwaysShowRepositories": true,
+    "scm.showActions": true,
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc"
+}
