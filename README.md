@@ -191,7 +191,7 @@ void spinlock_release(spinlock_t *lk)
 
 好吧，还是遇到了一些问题，在仿照xv6写到这里时，我看到了一个新函数__sync_lock_test_and_set，但是不知道它是做什么的。
 
-![img](picture/6.png)
+![img](pictures/6.png)
 
 原来这些\__sync__*函数不是需要我自己实现的，它是编译器的内建函数，在编译过程中会直接被替换为对应的RISC-V汇编指令。所以应当是可以直接拿来使用的。
 
