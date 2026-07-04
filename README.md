@@ -6,11 +6,11 @@
 
 按照建议，我创建了一个自己的github库https://github.com/sangjiyo/sang，用来保存这一次的实验代码，以及方便对每一次修改进行保存和管理。首先我就遇到了一个问题，在本地我创建的文件夹下，我直接拉取了华师大的lab1的代码框架，而后希望以此为起点，创建我自己的lab-0分支，合并提交到我自己的库中。就遇到了下面的第一个报错。
 
-![img](pictures\1.png)
+![img](pictures/1.png)
 
 看到这个报错之后，我第一时间猜测可能是因为我直接在我的库中拉取了别人的库，合并时发生了一些冲突之类的，直接将报错信息提交给deepseek（我比较喜欢用这个的网页版）之后，果然跟我想的差不多。所以将这个仓库里的.git删掉就行了。还有一个.gitignore，用来在上传仓库的时候设置忽略哪些东西不要上传，一般是包含自己的密钥或者API-key等信息。
 
-![img](pictures\2.png)
+![img](pictures/2.png)
 
 继续后续的上传仓库操作就没有问题了。
 
@@ -18,7 +18,7 @@
 
 lab-1的实验引导介绍中说了内核的启动过程是从entry.S到start.c到main.c，entry.S设置内核的起始物理地址，并为cpu分配栈空间，而后跳转到start.c开始执行，xv6-riscv-2020设计的是双核cpu启动，实现的方式是为每个cpu分配固定的空间，而后将第二颗cpu起始地址按照分配空间大小进行了一个偏移，确保两颗cpu互不干扰。
 
-![img](pictures\3.png)
+![img](pictures/3.png)
 
 而后start.c（运行在机器模式M-mode，这个是什么）的工作主要是，将cpu从裸机状态推进到内核的监管者模式S-mode（这个又是什么），并且跳转到C语言的main()函数，关键代码和主要工作如下。
 
@@ -85,7 +85,7 @@ kernel.ld 是 xv6 内核的链接脚本（Linker Script）。它在整个启动�
 
 以上，我终于对整个操作系统的开头启动过程，有了一点粗略的理解。而在华师大的lab-1中
 
-![img](pictures\4.png)
+![img](pictures/4.png)
 
 第一个目标已经完成了，需要参考xv6的代码，填充完整当前的start.c。
 
@@ -93,7 +93,7 @@ kernel.ld 是 xv6 内核的链接脚本（Linker Script）。它在整个启动�
 
 利用当前代码中的串口，仿照xv6的prntf实现，补充完整当前的print.c这里我直接将lab-1的串口文件uart.c和需要填充的print.c发送给ds让它进行填充。
 
-![img](pictures\5.png)
+![img](pictures/5.png)
 
 而后按照它给出的代码，对print.c进行补充。而后以printf("Hello %s, pid=%d", "World", 42);为例，对printf的工作流程，和代码作用进行分析
 
@@ -191,7 +191,7 @@ void spinlock_release(spinlock_t *lk)
 
 好吧，还是遇到了一些问题，在仿照xv6写到这里时，我看到了一个新函数__sync_lock_test_and_set，但是不知道它是做什么的。
 
-![img](pictures\6.png)
+![img](picture/6.png)
 
 原来这些\__sync__*函数不是需要我自己实现的，它是编译器的内建函数，在编译过程中会直接被替换为对应的RISC-V汇编指令。所以应当是可以直接拿来使用的。
 
@@ -238,10 +238,10 @@ int main()
 
 ```
 
-![img](pictures\7.png)
+![img](pictures/7.png)
 
 成功了，但是cpu1先打印的输出信息，明显需要进行一些同步，这里我选择修改在cpu0初始化完成并通知cpu1之前打印输出信息。
 
-![img](pictures\8.png)
+![img](pictures/8.png)
 
 搞定！以上lab-1的内容已经全部完成，后续的lab内容我需要加快一下速度了，先将内容上传保存到我的仓库中。
