@@ -121,6 +121,7 @@ volatile int panicked = 0;
 /* 报错并终止输出 */
 void panic(const char *s)
 {
+
     printf("panic! %s\n", s);
     panicked = 1;
     while (1)

@@ -14,7 +14,7 @@ SECTIONS
     . = ALIGN(0x1000);
     ASSERT(. - _trampoline == 0x1000, "error: trampoline larger than one page");
     */
-    PROVIDE(etext = .);
+    PROVIDE(KERNEL_DATA = .);
   }
 
   .rodata : {
@@ -38,5 +38,7 @@ SECTIONS
     *(.bss .bss.*)
   }
 
-  PROVIDE(end = .);
+  . = ALIGN(4096);
+  PROVIDE(ALLOC_BEGIN = .);
+  PROVIDE(ALLOC_END = 0x80000000 + 128M);
 }

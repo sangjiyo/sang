@@ -61,6 +61,8 @@ ifeq ($(wildcard $(TARGET)),)
 	@mkdir -p $(TARGET)/kernel/boot
 	@mkdir -p $(TARGET)/kernel/lock
 	@mkdir -p $(TARGET)/kernel/lib
+	@mkdir -p $(TARGET)/kernel/mem
+	@mkdir -p $(TARGET)/kernel/trap
 endif
 
 # 编译规则：将汇编文件(.S)编译为目标文件(.o)

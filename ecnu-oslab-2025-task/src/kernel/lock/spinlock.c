@@ -1,4 +1,4 @@
-#include "mod.h"
+﻿#include "mod.h"
 
 /*
     开关中断的基本逻辑:
@@ -49,7 +49,7 @@ bool spinlock_holding(spinlock_t *lk)
 }
 
 // 获取自旋锁
-void spinlock_acquire(spinlock_t *lk)
+void spinlock_acquire(spinlock_t* lk)
 {
     push_off();
     if (spinlock_holding(lk))
@@ -67,5 +67,8 @@ void spinlock_release(spinlock_t *lk)
     lk->cpuid = 0;
     __sync_synchronize();
     __sync_lock_release(&lk->locked);
+    // 增加一个屏障，确保解锁操作在返回之前全局可见
+    __sync_synchronize();
+
     pop_off();
 }
