@@ -1,4 +1,4 @@
-/* low-level driver routines for 16550a UART. */
+﻿/* low-level driver routines for 16550a UART. */
 
 #include "mod.h"
 
@@ -66,7 +66,7 @@ void uart_intr(void)
 	{
 		int c = uart_getc_sync();
 		if (c == -1)
-		break;
+			break;
 		uart_putc_sync(c);
 	}
 }
