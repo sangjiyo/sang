@@ -1,4 +1,4 @@
-#include "mod.h"
+﻿#include "mod.h"
 
 // 中断信息
 static char *interrupt_info[16] = {
@@ -87,7 +87,12 @@ void trap_kernel_handler()
         // 1-中断处理
         switch (trap_id) // 中断产生原因分类
         {
-
+        case 1:  // S-mode software interrupt（由 M-mode 时钟触发）
+            timer_interrupt_handler();
+            break;
+        case 9:  // S-mode external interrupt（外设，如 UART）
+            external_interrupt_handler();
+            break;
         default: // 例外处理
             printf("\nunexpected interrupt: %s\n", interrupt_info[trap_id]);
             printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);
@@ -109,7 +114,15 @@ void trap_kernel_handler()
 // 外设中断处理 (基于PLIC，lab-3只需要识别和处理UART中断)
 void external_interrupt_handler()
 {
-
+    int irq = plic_claim();
+    if (irq == UART_IRQ) {
+        uart_intr();
+        plic_complete(irq);
+    }
+    else {
+        // 其他外设中断可后续扩展
+        if (irq) plic_complete(irq);
+    }
 }
 
 // 时钟中断处理 (基于CLINT)

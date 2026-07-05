@@ -274,3 +274,234 @@ int main()
 
 没错，代码没有问题，就是测试代码中，我框出来的那一部分，进行 pmem_free操作过于频繁，在RISC-V中就会出现问题。 物理内存管理已经实现。所有测试都能通过。而后进行的虚拟内存管理测试也没有什么太大的问题，实验指导中给的测试代码有一定的出入，需要做一些调整。
 
+## 七、中断异常初步
+
+在阅读完代码和这一部分的实验指导之后，我大概了解了中断的处理过程。不过在RISC-V中，有一个统筹的概念叫陷阱(trap)，不是太理解为什么这么叫，反正它就是用来统称中断(interrupt)和异常(exception)两种类型的。中断和异常都是对正常执行过程的一个打断，只不过前者可以预见，而后者是突发情况，还都涉及到特权级的陷入和返回，例如U-mode陷入S-mode再返回U-mode，或者同级切换（不是很理解）。不一样的地方在于，中断是在当前一个时钟周期完成之后的，所以中断处理完成后，会继续执行下一个指令；而异常则是不分情况的对当前指令流的一个突然打断，所以异常处理完成后还需要回来重新把当前的指令执行完成。说白了就是中断执行完回来继续做下一件事情，异常处理完还需要把刚刚被打断的事情重新做完整。
+
+而在trap.S代码中可以看到，在处理中断的时候，会在内存中开辟一块空间，给到cpu中的通用寄存器，用来保存寄存器中的状态，在中断处理完成后，cpu从内存中恢复到中断之前的状态后，再将这块空间销毁。
+
+![img](pictures/16.png)
+
+当前需要我完成的有timer.c、trap_kernel.c、start.c、uart.c，还是依旧参考xv6，让ds帮我分析。
+
+![img](pictures/17.png)
+
+先做一个简单的，需要让UART函数支持换行和 Backspace，要修改uart.c的uart_intr函数，增加一些功能。
+
+``` c
+// 中断处理(键盘输入->屏幕输出)
+void uart_intr(void)
+{
+	while (1)
+	{
+		int c = uart_getc_sync();
+		if (c == -1)
+			break;
+
+		// 处理回车：转换成换行并输出
+		if (c == '\r') {
+			uart_putc_sync('\r');
+			uart_putc_sync('\n');
+			continue;
+		}
+		// 处理退格（DEL 或 Backspace）
+		if (c == '\b' || c == '\x7f') {
+			uart_putc_sync('\b');
+			uart_putc_sync(' ');
+			uart_putc_sync('\b');
+			continue;
+		}
+		// 普通字符直接回显
+		uart_putc_sync(c);
+	}
+}
+```
+
+然后先仿照xv6的start.c进行修改一下
+
+``` c
+//...现有代码
+// 将异常和中断委托给 S-mode
+w_medeleg(0xffff);
+w_mideleg(0xffff);
+w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
+
+// 初始化时钟中断（必须在进入 S-mode 前设置好 M-mode 的中断向量）
+timer_init();
+
+// 设置M-mode的返回地址
+w_mepc((uint64)main);
+```
+
+完善timer.c
+
+``` c
+// 时钟创建
+void timer_create()
+{
+    spinlock_init(&sys_timer.lk, "sys_timer");
+    sys_timer.ticks = 0;
+}
+
+// 时钟更新
+void timer_update()
+{
+    spinlock_acquire(&sys_timer.lk);
+    sys_timer.ticks++;
+    spinlock_release(&sys_timer.lk);
+}
+
+// 获取滴答数量 (不把sys_timer暴露出去, 只提供安全的访问接口)
+uint64 timer_get_ticks()
+{
+    uint64 ticks;
+    spinlock_acquire(&sys_timer.lk);
+    ticks = sys_timer.ticks;
+    spinlock_release(&sys_timer.lk);
+    return ticks;
+}
+```
+
+完善trap_kernel.c
+
+``` c
+void trap_kernel_handler()
+{
+    //...已有的代码
+    int trap_id = scause & 0xf;
+
+    /* 高位bit标识了是中断还是异常 */
+    if (scause & 0x8000000000000000ul) {
+        // 1-中断处理
+        switch (trap_id) // 中断产生原因分类
+        {
+        case 1:  // S-mode software interrupt（由 M-mode 时钟触发）
+            timer_interrupt_handler();
+            break;
+        case 9:  // S-mode external interrupt（外设，如 UART）
+            external_interrupt_handler();
+            break;
+        default: // 例外处理
+            printf("\nunexpected interrupt: %s\n", interrupt_info[trap_id]);
+            printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);
+            panic("trap_kernel_handler");
+        }
+    } else {
+        // 2-异常处理...
+    }
+}
+// 外设中断处理 (基于PLIC，lab-3只需要识别和处理UART中断)
+void external_interrupt_handler()
+{
+    int irq = plic_claim();
+    if (irq == UART_IRQ) {
+        uart_intr();
+        plic_complete(irq);
+    }
+    else {
+        // 其他外设中断可后续扩展
+        if (irq) plic_complete(irq);
+    }
+}
+```
+
+而后根据实验测试要求，让ds给我生成了测试用的main.c的代码
+
+``` c
+#include "arch/mod.h"
+#include "lib/mod.h"
+#include "mem/mod.h"
+#include "trap/mod.h"
+
+// 全局标志：用于主核通知从核初始化已完成
+volatile static int started = 0;
+
+// 测试模式：1-滴答测试（打印 ticks），2-多核 di da 测试 ， 3-输入输出测试
+#define TEST_MODE 3        
+
+int main()
+{
+    int cpuid = r_tp();
+
+    if (cpuid == 0) {
+
+        print_init();
+        pmem_init();
+        kvm_init();
+        kvm_inithart();
+
+        // 初始化 trap 子系统（PLIC、timer 锁、中断向量）
+        trap_kernel_init();
+        trap_kernel_inithart();
+
+        printf("cpu %d is booting!\n", cpuid);
+        __sync_synchronize();
+        started = 1;
+
+#if TEST_MODE == 1
+        // 滴答测试：主核轮询 ticks 变化并打印
+        uint64 last_ticks = 0;
+        while (1) {
+            uint64 now = timer_get_ticks();
+            if (now != last_ticks) {
+                printf("ticks = %d\n", now);
+                last_ticks = now;
+            }
+            // 简单忙等待，保证中断能正常响应
+            for (volatile int i = 0; i < 100000; i++);
+        }
+#elif TEST_MODE == 2
+        // di da 测试：每次 ticks 增加时打印当前 CPU 标识
+        uint64 last_ticks = 0;
+        while (1) {
+            uint64 now = timer_get_ticks();
+            if (now != last_ticks) {
+                printf("cpu %d:di da\n", cpuid);
+                last_ticks = now;
+            }
+            for (volatile int i = 0; i < 10000000; i++);
+        }
+#endif
+
+    }
+    else {
+
+        while (started == 0);
+        __sync_synchronize();
+        // ---------- 从核 trap 初始化 ----------
+        trap_kernel_inithart();
+
+        printf("cpu %d is booting!\n", cpuid);
+
+#if TEST_MODE == 2
+        // 从核也参与 di da 打印
+        uint64 last_ticks = 0;
+        while (1) {
+            uint64 now = timer_get_ticks();
+            if (now != last_ticks) {
+                printf("cpu %d:di da\n", cpuid);
+                last_ticks = now;
+            }
+            for (volatile int i = 0; i < 10000000; i++);
+        }
+#else
+
+        // 从核可以进入低功耗循环或执行其他任务
+        while (1) {
+            // 可加入 wfi 指令降低功耗
+            // asm volatile("wfi");
+        }
+#endif
+
+    }
+    return 0;
+}
+```
+
+成功实现了时钟的测试
+
+![img](pictures/18.png)
+
+成功实现了输入显示，退格，换行的逻辑
+
+![img](pictures/19.png)

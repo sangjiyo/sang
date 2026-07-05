@@ -67,6 +67,20 @@ void uart_intr(void)
 		int c = uart_getc_sync();
 		if (c == -1)
 			break;
+
+		// 处理回车：转换成换行并输出
+		if (c == '\r') {
+			uart_putc_sync('\n');
+			continue;
+		}
+		// 处理退格（DEL 或 Backspace）
+		if (c == '\b' || c == '\x7f') {
+			uart_putc_sync('\b');
+			uart_putc_sync(' ');
+			uart_putc_sync('\b');
+			continue;
+		}
+		// 普通字符直接回显
 		uart_putc_sync(c);
 	}
 }

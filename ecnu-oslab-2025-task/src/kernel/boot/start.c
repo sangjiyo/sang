@@ -1,4 +1,5 @@
 ﻿#include "../arch/mod.h"
+#include "../trap/mod.h"
 
 // 每个CPU在运行操作系统时需要一个初始的函数栈
 __attribute__((aligned(16))) uint8 CPU_stack[4096 * NCPU];
@@ -20,6 +21,14 @@ void start()
     status &= ~MSTATUS_MPP_MASK;
     status |= MSTATUS_MPP_S;
     w_mstatus(status);
+
+    // 将异常和中断委托给 S-mode
+    w_medeleg(0xffff);
+    w_mideleg(0xffff);
+    w_sie(r_sie() | SIE_SEIE | SIE_STIE | SIE_SSIE);
+
+    // 初始化时钟中断（必须在进入 S-mode 前设置好 M-mode 的中断向量）
+    timer_init();
 
     // 设置M-mode的返回地址
     w_mepc((uint64)main);
