@@ -1,4 +1,4 @@
-#ifndef __SYSCALL_H__
+﻿#ifndef __SYSCALL_H__
 #define __SYSCALL_H__
 
 #include "syscall_arch.h"

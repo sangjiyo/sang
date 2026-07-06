@@ -1,4 +1,4 @@
-target/kernel/trap/trap_kernel.o: src/kernel/trap/trap_kernel.c \
+target/kernel/trap/trap_user.o: src/kernel/trap/trap_user.c \
  src/kernel/trap/mod.h src/kernel/trap/type.h \
  src/kernel/trap/../lock/type.h src/kernel/trap/../lock/../arch/type.h \
  src/kernel/trap/method.h src/kernel/trap/../arch/mod.h \

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../lock/type.h"
 
 
@@ -15,6 +15,11 @@
 
 // 物理页是最基本的资源单位, 大小设置为4KB
 #define PGSIZE 4096
+
+#define TRAMPOLINE (VA_MAX - PGSIZE)
+#define TRAPFRAME  (TRAMPOLINE - PGSIZE)
+// 每个内核栈占2页，中间有保护页
+#define KSTACK(p)  (TRAPFRAME - ((p)+1) * 2 * PGSIZE)  
 
 // 物理页节点
 typedef struct page_node
