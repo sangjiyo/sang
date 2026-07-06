@@ -19,6 +19,8 @@ uint64 timer_get_ticks();    // 获取时钟的tick
 void trap_kernel_init();
 void trap_kernel_inithart();
 void trap_kernel_handler();
+void trap_user_handler();
+void trap_user_return();
 
 // 辅助函数: 外设中断和时钟中断处理
 
