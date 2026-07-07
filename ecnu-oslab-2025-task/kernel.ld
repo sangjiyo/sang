@@ -1,4 +1,4 @@
-OUTPUT_ARCH( "riscv" )
+﻿OUTPUT_ARCH( "riscv" )
 ENTRY( _entry )
 
 SECTIONS
@@ -8,13 +8,15 @@ SECTIONS
   .text : {
     *(.text .text.*)
     . = ALIGN(0x1000);
-    /*
+
     _trampoline = .;
     *(trampsec)
     . = ALIGN(0x1000);
     ASSERT(. - _trampoline == 0x1000, "error: trampoline larger than one page");
-    */
-    PROVIDE(etext = .);
+    
+    PROVIDE(trampoline = _trampoline);
+
+    PROVIDE(KERNEL_DATA = .);
   }
 
   .rodata : {
@@ -38,5 +40,7 @@ SECTIONS
     *(.bss .bss.*)
   }
 
-  PROVIDE(end = .);
+  . = ALIGN(4096);
+  PROVIDE(ALLOC_BEGIN = .);
+  PROVIDE(ALLOC_END = 0x80000000 + 128M);
 }
