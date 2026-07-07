@@ -8,4 +8,5 @@ target/kernel/trap/trap_user.o: src/kernel/trap/trap_user.c \
  src/kernel/trap/../lib/method.h src/kernel/trap/../lib/../lock/mod.h \
  src/kernel/trap/../lib/../lock/method.h src/kernel/trap/../mem/mod.h \
  src/kernel/trap/../mem/type.h src/kernel/trap/../mem/method.h \
- src/kernel/trap/../proc/mod.h src/kernel/trap/../proc/method.h
+ src/kernel/trap/../proc/mod.h src/kernel/trap/../proc/method.h \
+ src/kernel/trap/../../user/syscall_num.h

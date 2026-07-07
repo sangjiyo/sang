@@ -1,4 +1,4 @@
-OUTPUT_ARCH( "riscv" )
+﻿OUTPUT_ARCH( "riscv" )
 ENTRY( _entry )
 
 SECTIONS
@@ -13,6 +13,8 @@ SECTIONS
     *(trampsec)
     . = ALIGN(0x1000);
     ASSERT(. - _trampoline == 0x1000, "error: trampoline larger than one page");
+    
+    PROVIDE(trampoline = _trampoline);
 
     PROVIDE(KERNEL_DATA = .);
   }

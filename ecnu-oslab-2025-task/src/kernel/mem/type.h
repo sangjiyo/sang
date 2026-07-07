@@ -16,15 +16,10 @@
 // 物理页是最基本的资源单位, 大小设置为4KB
 #define PGSIZE 4096
 
-#define TRAMPOLINE (VA_MAX - PGSIZE)
-#define TRAPFRAME  (TRAMPOLINE - PGSIZE)
-// 每个内核栈占2页，中间有保护页
-#define KSTACK(p)  (TRAPFRAME - ((p)+1) * 2 * PGSIZE)  
-
 // 物理页节点
 typedef struct page_node
 {
-    struct page_node *next;
+    struct page_node* next;
 } page_node_t;
 
 // 许多物理页构成一个可分配的区域
@@ -61,7 +56,7 @@ extern char ALLOC_END[];
     内核使用RISC-V体系结构中的SV39作为虚拟内存的设计规范
 
     1. 页表与satp寄存器
-    
+
     satp寄存器的bit结构: MODE(4bit) + ASID(16bit) + PPN(44bit)
     - MODE控制虚拟内存模式
     - ASID与Flash刷新有关
@@ -76,7 +71,7 @@ extern char ALLOC_END[];
           9    +   9    +   9    +   12    = 39 (使用uint64存储) => 最大虚拟地址为512GB
     SV39使用三级页表对应三级VPN, VPN[2]称为顶级页表、VPN[1]称为次级页表、VPN[0]称为低级页表
     为什么每一级页框号是"9": 4KB/sizeof(PTE) = 512 = 2^9 所以一个物理页可以存放512个页表项
-    生活中的例子: 假设你要在全国范围内找一个不认识的大学老师, 
+    生活中的例子: 假设你要在全国范围内找一个不认识的大学老师,
     - 你可以先到教育部(顶级页表)查询, 得知这个老师属于大学A
     - 你接着来到大学A(次级页表)查询, 得知这个老师属于学院B
     - 你最后来到学院B(低级页表)查询, 得知这个老师属于办公室C
@@ -127,3 +122,15 @@ typedef pte_t* pgtbl_t;
 
 // 定义一个非常大的VA, 正常来说所有VA不得大于它
 #define VA_MAX (1ul << 38)
+
+// S-mode <-> U-mode 切换过程用到的公共代码区域 (内核页表 + 用户页表)
+#define TRAMPOLINE     (VA_MAX - PGSIZE)
+
+// S-mode <-> U-mode 切换过程用到的临时数据区域 (用户页表)
+#define TRAPFRAME      (TRAMPOLINE - PGSIZE)
+
+// 各个进程的内核空间函数栈 (内核页表)
+#define KSTACK(procid) (TRAPFRAME - ((procid) + 1) * 2 * PGSIZE)
+
+// 用户空间基地址 (用户页表)
+#define USER_BASE      (PGSIZE)

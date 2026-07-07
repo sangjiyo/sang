@@ -1,4 +1,5 @@
 ﻿#include "mod.h"
+#include "../../user/syscall_num.h"
 
 // in trampoline.S
 extern char trampoline[];  // 内核和用户切换的代码
@@ -17,65 +18,71 @@ extern char* exception_info[16]; // 异常错误信息
 void trap_user_handler()
 {
 
-    printf("U");
+    // 确认trap来自U-mode
+    uint64 sstatus = r_sstatus();
+    assert(!(sstatus & SSTATUS_SPP), "trap_user_handler: not from user mode");
+
+    // 进入内核后，将trap入口切换为kernel_vector
+    // 这样在内核处理期间发生的trap由kernel_vector处理
+    w_stvec((uint64)kernel_vector);
+
+    uint64 sepc = r_sepc();       // 发生trap时的用户PC
+    uint64 scause = r_scause();   // trap原因
+    uint64 stval = r_stval();     // 附加信息
 
     // 获取当前 CPU 上运行的进程（需确保 mycpu()->proc 已设置）
     proc_t* p = myproc();
 
-    if (p == NULL)
-        panic("trap_user_handler: no current process");
+    // 保存用户PC到trapframe（用于后续返回到用户态）
+    p->tf->user_to_kern_epc = sepc;
 
-    // 进入内核态，立即将 stvec 设为内核向量，以正确处理内核态中断
-    w_stvec((uint64)kernel_vector);
-
-    trapframe_t* tf = p->tf;
-
-    // 读取 scause, sepc 等
-    uint64 scause = r_scause();
-    uint64 sepc = r_sepc();
-    uint64 stval = r_stval();
-
-    // 保存用户 PC（用于可能的返回）
-    tf->user_to_kern_epc = sepc;
-
-    // 处理不同类型的 trap
-    if (scause & 0x8000000000000000L) {
-        // 中断（通常用户态中断会由内核处理，但也可直接处理）
-        // 这里简单交给内核处理，但用户态中断较少，可忽略或转发
-        panic("trap_user_handler: unexpected interrupt in user mode");
+    /* 高位bit标识了是中断还是异常 */
+    if (scause & 0x8000000000000000ul) {
+        // 1-中断处理
+        int trap_id = scause & 0xf;
+        switch (trap_id)
+        {
+        case 1:  // S-mode software interrupt（时钟中断由M-mode转发）
+            timer_interrupt_handler();
+            break;
+        case 9:  // S-mode external interrupt（外设，如UART）
+            external_interrupt_handler();
+            break;
+        default:
+            printf("\nunexpected interrupt from user: %s\n", interrupt_info[trap_id]);
+            printf("sepc = %p, stval = %p\n", sepc, stval);
+            panic("trap_user_handler: interrupt");
+        }
     }
     else {
-        // 异常
-        switch (scause) {
-        case 8: {
-            // 让 PC 跳过 ecall 指令（4 字节），避免循环
-            tf->user_to_kern_epc += 4;
+        // 2-异常处理
+        int trap_id = scause & 0xf;
+        switch (trap_id)
+        {
+        case 8:  // Environment call from U-mode (ecall) -> 系统调用
+        {
+            // 系统调用：epc指向ecall指令，返回时需跳过它，PC=PC+4
+            p->tf->user_to_kern_epc += 4;
 
-            // 从陷阱帧中读取系统调用号（a7 寄存器）
-            uint64 syscall_num = tf->a7;
-
-            // 开启中断，以便在处理系统调用时能响应其他中断
-            intr_on();
-
-            // 处理具体的系统调用
-            if (syscall_num == 0) {
-                printf("helloworld\n");
+            // 系统调用号存放在a7寄存器中（RISC-V syscall约定）
+            uint64 sys_num = p->tf->a7;
+            if (sys_num == SYS_helloworld) {
+                printf("proczero: hello world!\n");
             }
             else {
-                printf("Unknown syscall %d\n", syscall_num);
+                printf("unknown syscall: %d from pid %d\n", sys_num, p->pid);
             }
-
-            
             break;
         }
+
         default:
-            printf("unexpected exception in user mode: scause=%p, sepc=%p, stval=%p\n",
-                scause, sepc, stval);
-            panic("trap_user_handler: unknown exception");
+            printf("\nunexpected exception from user: %s\n", exception_info[trap_id]);
+            printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);
+            panic("trap_user_handler: exception");
         }
     }
 
-    // 返回用户态
+    // trap处理完毕，返回用户态
     trap_user_return();
 }
 
@@ -108,6 +115,7 @@ void trap_user_return()
     sstatus &= ~SSTATUS_SPP;
     // 开启用户态中断（若之前允许）
     sstatus |= SSTATUS_SPIE;
+
     w_sstatus(sstatus);
     w_sepc(tf->user_to_kern_epc);
 

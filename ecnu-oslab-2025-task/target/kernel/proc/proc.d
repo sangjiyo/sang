@@ -11,4 +11,5 @@ target/kernel/proc/proc.o: src/kernel/proc/proc.c src/kernel/proc/mod.h \
  src/kernel/proc/../mem/mod.h src/kernel/proc/../mem/type.h \
  src/kernel/proc/../mem/method.h src/kernel/proc/../mem/../trap/mod.h \
  src/kernel/proc/../mem/../trap/type.h \
- src/kernel/proc/../mem/../trap/method.h
+ src/kernel/proc/../mem/../trap/method.h \
+ src/kernel/proc/../../user/initcode.h

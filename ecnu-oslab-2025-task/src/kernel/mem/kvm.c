@@ -1,7 +1,7 @@
 ﻿#include "mod.h"
 
 // 内核页表
-pgtbl_t kernel_pgtbl;
+static pgtbl_t kernel_pgtbl;
 
 // 根据pagetable,找到va对应的pte
 // 若设置alloc=true 则在PTE无效时尝试申请一个物理页
@@ -126,9 +126,15 @@ void kvm_init()
     vm_mappages(kernel_pgtbl, (uint64)ALLOC_BEGIN, (uint64)ALLOC_BEGIN,
         (uint64)ALLOC_END - (uint64)ALLOC_BEGIN, PTE_R | PTE_W);
 
-    // ---------- 新增：映射 trampoline ----------
-    extern char trampoline[];   // 定义在 trampoline.S 中
+    // 映射 trampoline（用于S-mode和U-mode切换）
+    // 在用户和内核页表中使用相同的虚拟地址(TRAMPOLINE)，指向同一个物理页面
+    extern char trampoline[];
     vm_mappages(kernel_pgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+
+    // 分配并映射 proczero (procid=0) 的内核栈
+    uint64 kstack0_pa = (uint64)pmem_alloc(true);
+    vm_mappages(kernel_pgtbl, KSTACK(0), kstack0_pa, PGSIZE, PTE_R | PTE_W);
+
 }
 
 // 每个CPU都需要调用, 从不使用页表切换到使用内核页表
@@ -139,10 +145,10 @@ void kvm_inithart()
     sfence_vma();
 }
 
-// 内核页表映射函数（供 proc.c 使用，映射内核栈等）
-void kvmmap(uint64 va, uint64 pa, uint64 len, int perm)
+// 返回内核页表，供进程模块使用
+pgtbl_t kvm_pgtbl()
 {
-    vm_mappages(kernel_pgtbl, va, pa, len, perm);
+    return kernel_pgtbl;
 }
 
 // 输出页表内容(for debug)

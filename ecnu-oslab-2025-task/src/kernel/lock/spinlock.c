@@ -67,8 +67,6 @@ void spinlock_release(spinlock_t *lk)
     lk->cpuid = 0;
     __sync_synchronize();
     __sync_lock_release(&lk->locked);
-    // 增加一个屏障，确保解锁操作在返回之前全局可见
-    __sync_synchronize();
 
     pop_off();
 }

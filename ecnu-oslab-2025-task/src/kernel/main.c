@@ -21,7 +21,6 @@ int main()
         trap_kernel_init();
         trap_kernel_inithart();
         proc_make_first();
-        trap_user_return();
         __sync_synchronize();
         started = 1;
     } else {
