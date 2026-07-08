@@ -1,6 +1,5 @@
-﻿#pragma once
+#pragma once
 #include "../lock/type.h"
-
 
 /*---------------------------------- 关于物理内存 ---------------------------------------*/
 
@@ -19,7 +18,7 @@
 // 物理页节点
 typedef struct page_node
 {
-    struct page_node* next;
+    struct page_node *next;
 } page_node_t;
 
 // 许多物理页构成一个可分配的区域
@@ -56,7 +55,7 @@ extern char ALLOC_END[];
     内核使用RISC-V体系结构中的SV39作为虚拟内存的设计规范
 
     1. 页表与satp寄存器
-
+    
     satp寄存器的bit结构: MODE(4bit) + ASID(16bit) + PPN(44bit)
     - MODE控制虚拟内存模式
     - ASID与Flash刷新有关
@@ -71,7 +70,7 @@ extern char ALLOC_END[];
           9    +   9    +   9    +   12    = 39 (使用uint64存储) => 最大虚拟地址为512GB
     SV39使用三级页表对应三级VPN, VPN[2]称为顶级页表、VPN[1]称为次级页表、VPN[0]称为低级页表
     为什么每一级页框号是"9": 4KB/sizeof(PTE) = 512 = 2^9 所以一个物理页可以存放512个页表项
-    生活中的例子: 假设你要在全国范围内找一个不认识的大学老师,
+    生活中的例子: 假设你要在全国范围内找一个不认识的大学老师, 
     - 你可以先到教育部(顶级页表)查询, 得知这个老师属于大学A
     - 你接着来到大学A(次级页表)查询, 得知这个老师属于学院B
     - 你最后来到学院B(低级页表)查询, 得知这个老师属于办公室C
@@ -134,3 +133,27 @@ typedef pte_t* pgtbl_t;
 
 // 用户空间基地址 (用户页表)
 #define USER_BASE      (PGSIZE)
+
+/* mmap_region 描述了一个 mmap区域 */
+typedef struct mmap_region
+{
+    uint64 begin;             // 起始地址
+    uint32 npages;            // 管理的页面数量
+    struct mmap_region *next; // 链表指针
+} mmap_region_t;
+
+/* mmap_region_node 是 mmap_region 在仓库里的包装 */
+typedef struct mmap_region_node
+{
+    mmap_region_t mmap;
+    struct mmap_region_node *next;
+} mmap_region_node_t;
+
+/* 最大支持256个mmap_region_node */
+#define N_MMAP 256
+
+// 映射区域的终点 (给ustack留16MB内存空间)
+#define MMAP_END (TRAPFRAME - 16 * 256 * PGSIZE)
+
+// 映射区域的起点 (单个进程的mmap_reagion最大占据64MB内存空间)
+#define MMAP_BEGIN (MMAP_END - 64 * 256 * PGSIZE)
