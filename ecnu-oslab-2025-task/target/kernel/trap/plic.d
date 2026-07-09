@@ -1,9 +1,0 @@
-target/kernel/trap/plic.o: src/kernel/trap/plic.c src/kernel/trap/mod.h \
- src/kernel/trap/type.h src/kernel/trap/../lock/type.h \
- src/kernel/trap/../lock/../arch/type.h src/kernel/trap/method.h \
- src/kernel/trap/../arch/mod.h src/kernel/trap/../arch/method.h \
- src/kernel/trap/../lib/mod.h src/kernel/trap/../lib/type.h \
- /usr/lib/gcc-cross/riscv64-linux-gnu/9/include/stdarg.h \
- src/kernel/trap/../lib/method.h src/kernel/trap/../lib/../lock/mod.h \
- src/kernel/trap/../lib/../lock/method.h src/kernel/trap/../mem/mod.h \
- src/kernel/trap/../mem/type.h src/kernel/trap/../mem/method.h
