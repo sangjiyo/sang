@@ -53,6 +53,9 @@ void proc_make_first()
 {
     proc_t* p = &proczero;
 
+    //初始化mmap字段
+    p->mmap = NULL;
+
     // 1. 设置pid
     p->pid = 0;
 
@@ -70,13 +73,13 @@ void proc_make_first()
 
     // 5. 申请用户栈的物理页并完成映射
     //    用户栈放在 USER_BASE + 2*PGSIZE 位置（中间预留1页作为guard）
-    uint64 ustack_va = USER_BASE + 2 * PGSIZE;
+    uint64 ustack_va = USER_BASE + 64 * PGSIZE;
     uint64 ustack_pa = (uint64)pmem_alloc(false);
     vm_mappages(p->pgtbl, ustack_va, ustack_pa, PGSIZE, PTE_R | PTE_W | PTE_U);
     p->ustack_npage = 1;
 
     // 6. 设置堆顶：代码段之后（栈之前）的区域是可扩展的堆空间
-    p->heap_top = ustack_va;
+    p->heap_top = USER_BASE + PGSIZE;
 
     // 7. 设置trapframe中的用户程序入口和栈指针
     p->tf->user_to_kern_epc = USER_BASE;   // 用户代码起始地址

@@ -1,4 +1,5 @@
 ﻿#include "mod.h"
+#include "../syscall/mod.h"
 #include "../../user/syscall_num.h"
 
 // in trampoline.S
@@ -63,18 +64,45 @@ void trap_user_handler()
         {
             // 系统调用：epc指向ecall指令，返回时需跳过它，PC=PC+4
             p->tf->user_to_kern_epc += 4;
-
-            // 系统调用号存放在a7寄存器中（RISC-V syscall约定）
-            uint64 sys_num = p->tf->a7;
-            if (sys_num == SYS_helloworld) {
-                printf("proczero: hello world!\n");
-            }
-            else {
-                printf("unknown syscall: %d from pid %d\n", sys_num, p->pid);
-            }
+            syscall();
             break;
         }
+        case 12: // Instruction page fault
+        case 13: // Load page fault
+        case 15: // Store/AMO page fault
+        {
+            uint64 fault_addr = stval;
+            uint64 ustack_va = USER_BASE + 64 * PGSIZE;
+            uint64 current_low = ustack_va - (p->ustack_npage - 1) * PGSIZE;
+            uint64 stack_high = ustack_va + PGSIZE;
 
+            // 检查1：高于栈顶，非法（可能是堆或未映射区域）
+            if (fault_addr >= stack_high) {
+                printf("page fault at %p not in stack region\n", fault_addr);
+                panic("trap_user_handler: unexpected page fault");
+            }
+            // 检查2：低于堆起始地址，非法（可能与代码/空页重叠）
+            if (fault_addr < USER_BASE + PGSIZE) {
+                printf("page fault at %p below heap region\n", fault_addr);
+                panic("trap_user_handler: unexpected page fault (too low)");
+            }
+            // 检查3：已在已映射的栈区域内（不应缺页）
+            if (fault_addr >= current_low) {
+                printf("page fault at %p inside mapped stack\n", fault_addr);
+                panic("trap_user_handler: fault in already mapped stack");
+            }
+
+            // 合法栈扩展
+            uint64 old_npage = p->ustack_npage;
+            uint64 new_npage = uvm_ustack_grow(p->pgtbl, old_npage, fault_addr);
+            p->ustack_npage = new_npage;
+
+            printf("page fault occured! trap id = %d\n", trap_id);
+            printf("ustack_npage: %d -> %d\n", old_npage, new_npage);
+
+            p->tf->user_to_kern_epc = sepc;  // 重新执行原指令
+            break;
+        }
         default:
             printf("\nunexpected exception from user: %s\n", exception_info[trap_id]);
             printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);

@@ -52,8 +52,9 @@ bool spinlock_holding(spinlock_t *lk)
 void spinlock_acquire(spinlock_t* lk)
 {
     push_off();
-    if (spinlock_holding(lk))
+    if (spinlock_holding(lk)) {
         panic("acquire");
+    }
     while (__sync_lock_test_and_set(&lk->locked, 1) != 0);
     __sync_synchronize();
     lk->cpuid = mycpuid();
@@ -67,6 +68,5 @@ void spinlock_release(spinlock_t *lk)
     lk->cpuid = 0;
     __sync_synchronize();
     __sync_lock_release(&lk->locked);
-
     pop_off();
 }
