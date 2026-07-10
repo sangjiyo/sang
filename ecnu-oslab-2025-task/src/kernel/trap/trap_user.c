@@ -53,7 +53,7 @@ void trap_user_handler()
             break;
         default:
             printf("\nunexpected interrupt from user: %s\n", interrupt_info[trap_id]);
-            printf("sepc = %p, stval = %p\n", sepc, stval);
+            printf("sepc = %x, stval = %x\n", sepc, stval);
             panic("trap_user_handler: interrupt");
         }
     }
@@ -80,17 +80,17 @@ void trap_user_handler()
 
             // 检查1：高于栈顶，非法（可能是堆或未映射区域）
             if (fault_addr >= stack_high) {
-                printf("page fault at %p not in stack region\n", fault_addr);
+                printf("page fault at %x not in stack region\n", fault_addr);
                 panic("trap_user_handler: unexpected page fault");
             }
             // 检查2：低于堆起始地址，非法（可能与代码/空页重叠）
             if (fault_addr < USER_BASE + PGSIZE) {
-                printf("page fault at %p below heap region\n", fault_addr);
+                printf("page fault at %x below heap region\n", fault_addr);
                 panic("trap_user_handler: unexpected page fault (too low)");
             }
             // 检查3：已在已映射的栈区域内（不应缺页）
             if (fault_addr >= current_low) {
-                printf("page fault at %p inside mapped stack\n", fault_addr);
+                printf("page fault at %x inside mapped stack\n", fault_addr);
                 panic("trap_user_handler: fault in already mapped stack");
             }
 
@@ -107,7 +107,7 @@ void trap_user_handler()
         }
         default:
             printf("\nunexpected exception from user: %s\n", exception_info[trap_id]);
-            printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);
+            printf("trap_id = %d, sepc = %x, stval = %x\n", trap_id, sepc, stval);
             panic("trap_user_handler: exception");
         }
     }

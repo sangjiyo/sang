@@ -229,14 +229,14 @@ void buffer_print_info()
 
     printf("1.active list:\n");
     for (node = buf_head_active.next; node != &buf_head_active; node = node->next) {
-        printf("buffer %d(ref = %d): page(pa = %p) -> block[%d]\n",
+        printf("buffer %d(ref = %d): page(pa = %x) -> block[%d]\n",
             (int)(node - buf_cache), node->buf.ref, (uint64)node->buf.data, node->buf.block_num);
     }
     printf("over!\n");
 
     printf("2.inactive list:\n");
     for (node = buf_head_inactive.next; node != &buf_head_inactive; node = node->next) {
-        printf("buffer %d(ref = %d): page(pa = %p) -> block[%d]\n",
+        printf("buffer %d(ref = %d): page(pa = %x) -> block[%d]\n",
             (int)(node - buf_cache), node->buf.ref, (uint64)node->buf.data, node->buf.block_num);
     }
     printf("over!\n");
