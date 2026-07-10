@@ -446,10 +446,21 @@ static void copy_range(pgtbl_t old, pgtbl_t new, uint64 begin, uint64 end)
 // 拷贝的页表管理的物理页是原来页表的复制品
 void uvm_copy_pgtbl(pgtbl_t old, pgtbl_t new, uint64 heap_top, uint64 ustack_npage, mmap_region_t *mmap)
 {
+    // 1. 拷贝代码段 (USER_BASE ~ USER_BASE + PGSIZE)
     copy_range(old, new, USER_BASE, USER_BASE + PGSIZE);
+
+    // 2. 拷贝堆区域 (USER_BASE + PGSIZE ~ heap_top)
     copy_range(old, new, USER_BASE + PGSIZE, heap_top);
-    uint64 stack_top = USER_BASE + 2 * PGSIZE + ustack_npage * PGSIZE;
-    copy_range(old, new, USER_BASE + 2 * PGSIZE, stack_top);
+
+    // 3. 拷贝栈区域
+    //    栈位于 USER_BASE + 64 * PGSIZE, 向下生长
+    //    已映射的栈页从 (ustack_va - (ustack_npage - 1) * PGSIZE) 到 (ustack_va + PGSIZE)
+    uint64 ustack_va = USER_BASE + 64 * PGSIZE;
+    uint64 stack_begin = ustack_va - (ustack_npage - 1) * PGSIZE;
+    uint64 stack_end = ustack_va + PGSIZE;
+    copy_range(old, new, stack_begin, stack_end);
+
+    // 4. 拷贝mmap区域
     mmap_region_t* r = mmap;
     while (r) {
         copy_range(old, new, r->begin, r->begin + r->npages * PGSIZE);

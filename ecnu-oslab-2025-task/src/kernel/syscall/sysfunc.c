@@ -15,8 +15,8 @@ uint64 sys_brk()
 
     // 查询当前堆顶
     if (new_heap_top == 0) {
-        printf("look event: ret_heap_top = %x\n", old_heap_top);
-        vm_print(p->pgtbl);
+        //printf("look event: ret_heap_top = %x\n", old_heap_top);
+        //vm_print(p->pgtbl);
         return old_heap_top;
     }
 
@@ -30,8 +30,8 @@ uint64 sys_brk()
         uint32 inc = new_heap_top - old_heap_top;
         uint64 ret = uvm_heap_grow(p->pgtbl, old_heap_top, inc);
         p->heap_top = ret;
-        printf("grow event: ret_heap_top = %x\n", ret);
-        vm_print(p->pgtbl);
+        //printf("grow event: ret_heap_top = %x\n", ret);
+        //vm_print(p->pgtbl);
         return ret;
     }
     // 收缩
@@ -39,14 +39,14 @@ uint64 sys_brk()
         uint32 dec = old_heap_top - new_heap_top;
         uint64 ret = uvm_heap_ungrow(p->pgtbl, old_heap_top, dec);
         p->heap_top = ret;
-        printf("ungrow event: ret_heap_top = %x\n", ret);
-        vm_print(p->pgtbl);
+        //printf("ungrow event: ret_heap_top = %x\n", ret);
+        //vm_print(p->pgtbl);
         return ret;
     }
 
     // 相等
-    printf("equal event: ret_heap_top = %x\n", old_heap_top);
-    vm_print(p->pgtbl);
+    //printf("equal event: ret_heap_top = %x\n", old_heap_top);
+    //vm_print(p->pgtbl);
     return old_heap_top;
 }
 
@@ -71,9 +71,9 @@ uint64 sys_mmap()
     // 调用 uvm_mmap，内部会检查范围并自动分配/映射
     uvm_mmap(begin, npages, PTE_R | PTE_W);
     proc_t* p = myproc();
-    uvm_show_mmaplist(p->mmap);
-    vm_print(p->pgtbl);
-    printf("\n");
+    //uvm_show_mmaplist(p->mmap);
+    //vm_print(p->pgtbl);
+    //printf("\n");
     mmap_region_t* last = p->mmap;
     while (last && last->next) last = last->next;
     if (begin == 0 && last) {
@@ -99,75 +99,83 @@ uint64 sys_munmap()
         return -1;
     }
     uvm_munmap(begin, npages);
-    proc_t* p = myproc();
-    uvm_show_mmaplist(p->mmap);
-    vm_print(p->pgtbl);
-    printf("\n");
+    //proc_t* p = myproc();
+    //uvm_show_mmaplist(p->mmap);
+    //vm_print(p->pgtbl);
+    //printf("\n");
     return 0;
 }
 
-/*
-    打印一个字符串
-    char *str
-    成功返回0
-*/
+// 打印一个字符串
+// char *str
+// 成功返回0
 uint64 sys_print_str()
 {
+    uint64 addr;
+    arg_uint64(0, &addr);
 
+    // 从用户空间读取字符串到内核缓冲区
+    char buf[STR_MAXLEN + 1];
+    proc_t *p = myproc();
+    uvm_copyin_str(p->pgtbl, (uint64)buf, addr, STR_MAXLEN);
+
+    // 打印字符串
+    printf("%s", buf);
+    return 0;
 }
 
-/*
-    打印一个32位整数
-    int num
-    成功返回0
-*/
+// 打印一个32位整数
+// int num
+// 成功返回0
 uint64 sys_print_int()
 {
-
+    uint32 num;
+    arg_uint32(0, &num);
+    printf("num = %d\n", (int)num);
+    return 0;
 }
 
-/*
-    进程复制
-    返回子进程的pid
-*/
+// 进程复制
+// 返回子进程的pid
 uint64 sys_fork()
 {
-
+    return proc_fork();
 }
 
-/*
-    等待子进程退出
-    uint64 addr_exit_state
-*/
+// 等待子进程退出
+// uint64 addr_exit_state
 uint64 sys_wait()
 {
-
+    uint64 addr;
+    arg_uint64(0, &addr);
+    return proc_wait(addr);
 }
 
-/*
-    进程退出
-    int exit_code
-    不返回
-*/
+// 进程退出
+// int exit_code
+// 不返回
 uint64 sys_exit()
 {
-
+    uint32 exit_code;
+    arg_uint32(0, &exit_code);
+    proc_exit((int)exit_code);
+    // proc_exit不会返回, 这里只是为了编译器
+    return 0;
 }
 
-/*
-    让进程睡眠一段时间
-    uint32 ntick (1个tick大约0.1秒)
-    成功返回0
-*/
+// 让进程睡眠一段时间
+// uint32 ntick (1个tick大约0.1秒)
+// 成功返回0
 uint64 sys_sleep()
 {
-
+    uint32 ntick;
+    arg_uint32(0, &ntick);
+    timer_wait((uint64)ntick);
+    return 0;
 }
 
-/*
-    返回当前进程的pid
-*/
+// 返回当前进程的pid
 uint64 sys_getpid()
 {
-
+    return myproc()->pid;
 }

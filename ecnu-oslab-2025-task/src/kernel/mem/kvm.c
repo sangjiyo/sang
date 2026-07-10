@@ -131,9 +131,12 @@ void kvm_init()
     extern char trampoline[];
     vm_mappages(kernel_pgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
-    // 分配并映射 proczero (procid=0) 的内核栈
-    uint64 kstack0_pa = (uint64)pmem_alloc(true);
-    vm_mappages(kernel_pgtbl, KSTACK(0), kstack0_pa, PGSIZE, PTE_R | PTE_W);
+    // 分配并映射所有进程的内核栈 (每个进程一个内核栈页面)
+    // KSTACK(procid) 的设计中, 相邻内核栈之间间隔一个 guard page (未映射, 防止栈溢出)
+    for (int i = 0; i < N_PROC; i++) {
+        uint64 kstack_pa = (uint64)pmem_alloc(true);
+        vm_mappages(kernel_pgtbl, KSTACK(i), kstack_pa, PGSIZE, PTE_R | PTE_W);
+    }
 
 }
 

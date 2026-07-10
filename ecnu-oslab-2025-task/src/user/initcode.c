@@ -1,15 +1,15 @@
-// test-1: sys_getpid and sys_print
-#include "sys.h"
+﻿// test-1: sys_getpid and sys_print
+// #include "sys.h"
 
-int main()
-{
-	int pid = syscall(SYS_getpid);
-	if (pid == 1) {
-		syscall(SYS_print_str, "\nproczero: hello ");
-		syscall(SYS_print_str, "world!\n");
-	}
-	while (1);	
-}
+// int main()
+// {
+// 	int pid = syscall(SYS_getpid);
+// 	if (pid == 1) {
+// 		syscall(SYS_print_str, "\nproczero: hello ");
+// 		syscall(SYS_print_str, "world!\n");
+// 	}
+// 	while (1);	
+// }
 
 
 
@@ -80,19 +80,19 @@ int main()
 // }
 
 // test-4: sleep
-// #include "sys.h"
+#include "sys.h"
 
-// int main()
-// {
-// 	int pid = syscall(SYS_fork);
-// 	if (pid == 0) {
-// 		syscall(SYS_print_str, "Ready to sleep!\n");
-// 		syscall(SYS_sleep, 30);
-// 		syscall(SYS_print_str, "Ready to exit!\n");
-// 		syscall(SYS_exit, 0);
-// 	} else {
-// 		syscall(SYS_wait, 0);
-// 		syscall(SYS_print_str, "Child exit!\n");
-// 	}
-// 	while(1);
-// }
+int main()
+{
+	int pid = syscall(SYS_fork);
+	if (pid == 0) {
+		syscall(SYS_print_str, "Ready to sleep!\n");
+		syscall(SYS_sleep, 30);
+		syscall(SYS_print_str, "Ready to exit!\n");
+		syscall(SYS_exit, 0);
+	} else {
+		syscall(SYS_wait, 0);
+		syscall(SYS_print_str, "Child exit!\n");
+	}
+	while(1);
+}

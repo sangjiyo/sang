@@ -1,4 +1,4 @@
-#include "arch/mod.h"
+﻿#include "arch/mod.h"
 #include "lib/mod.h"
 #include "mem/mod.h"
 #include "trap/mod.h"
@@ -35,10 +35,11 @@ int main()
         printf("cpu %d is booting!\n", cpuid);
         kvm_inithart();
         trap_kernel_inithart();
+        
+        
     }
-
+    
     proc_scheduler();
-
     panic("main: never back!");
     return 0;
 }

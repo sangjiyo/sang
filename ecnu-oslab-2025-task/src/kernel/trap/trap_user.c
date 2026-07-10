@@ -45,6 +45,8 @@ void trap_user_handler()
         {
         case 1:  // S-mode software interrupt（时钟中断由M-mode转发）
             timer_interrupt_handler();
+            // 时钟中断处理后, 让当前进程主动让出CPU
+            proc_yield();
             break;
         case 9:  // S-mode external interrupt（外设，如UART）
             external_interrupt_handler();

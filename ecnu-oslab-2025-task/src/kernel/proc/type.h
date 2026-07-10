@@ -1,5 +1,6 @@
 #pragma once
 #include "../arch/type.h"
+#include "../lock/type.h"
 
 // 同优先级的上下文
 typedef struct context

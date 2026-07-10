@@ -89,6 +89,13 @@ void trap_kernel_handler()
         {
         case 1:  // S-mode software interrupt（由 M-mode 时钟触发）
             timer_interrupt_handler();
+            // 时钟中断处理后, 如果当前有进程正在运行, 让出CPU
+            // 检查 myproc() != NULL 且 state == RUNNING, 防止在调度器/临界区中 yield
+            {
+                proc_t *p = myproc();
+                if (p != NULL && p->state == RUNNING)
+                    proc_yield();
+            }
             break;
         case 9:  // S-mode external interrupt（外设，如 UART）
             external_interrupt_handler();
