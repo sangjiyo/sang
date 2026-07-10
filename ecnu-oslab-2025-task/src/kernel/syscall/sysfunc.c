@@ -1,59 +1,4 @@
 ﻿#include "mod.h"
-extern int alloc_cnt; // 在 mmap.c 中声明
-
-/*
-    测试: 从用户空间传入一个int类型的数组
-    uint64 addr 数组起始地址
-    uint32 len  元素数量
-    成功返回0
-*/
-uint64 sys_copyin()
-{
-    uint64 addr;
-    uint32 len;
-    arg_uint64(0, &addr);
-    arg_uint32(1, &len);
-    // 分配临时缓冲区（动态分配或使用栈，这里简单限制长度）
-    if (len > 256)
-        panic("sys_copyin: len too large");
-    int buf[256];
-    uvm_copyin(myproc()->pgtbl, (uint64)buf, addr, len * sizeof(int));
-    printf("Kernel received: ");
-    for (int i = 0; i < len; i++)
-        printf("%d ", buf[i]);
-    printf("\n");
-    return 0;  // 成功返回0
-}
-
-/*
-    测试: 向用户空间传出一个int类型的数组
-    uint64 addr 数组起始地址
-    成功返回拷贝的元素数量
-*/
-uint64 sys_copyout()
-{
-    uint64 addr;
-    arg_uint64(0, &addr);
-    int data[] = { 1, 2, 3, 4, 5 };
-    uvm_copyout(myproc()->pgtbl, addr, (uint64)data, sizeof(data));
-    return sizeof(data) / sizeof(int);  // 返回拷贝的元素数量 (5)
-}
-
-/*
-    测试: 从用户空间传入一个字符串
-    uint64 addr 字符串起始地址
-    成功返回0
-*/
-uint64 sys_copyinstr()
-{
-    uint64 addr;
-    arg_uint64(0, &addr);
-    printf("sys_copyinstr: addr = %p\n", addr);
-    char buf[128];
-    uvm_copyin_str(myproc()->pgtbl, (uint64)buf, addr, sizeof(buf));
-    printf("get string for user: %s\n", buf);
-    return 0;  // 成功返回0
-}
 
 /*
     用户堆空间伸缩
@@ -159,4 +104,70 @@ uint64 sys_munmap()
     vm_print(p->pgtbl);
     printf("\n");
     return 0;
+}
+
+/*
+    打印一个字符串
+    char *str
+    成功返回0
+*/
+uint64 sys_print_str()
+{
+
+}
+
+/*
+    打印一个32位整数
+    int num
+    成功返回0
+*/
+uint64 sys_print_int()
+{
+
+}
+
+/*
+    进程复制
+    返回子进程的pid
+*/
+uint64 sys_fork()
+{
+
+}
+
+/*
+    等待子进程退出
+    uint64 addr_exit_state
+*/
+uint64 sys_wait()
+{
+
+}
+
+/*
+    进程退出
+    int exit_code
+    不返回
+*/
+uint64 sys_exit()
+{
+
+}
+
+/*
+    让进程睡眠一段时间
+    uint32 ntick (1个tick大约0.1秒)
+    成功返回0
+*/
+uint64 sys_sleep()
+{
+
+}
+
+/*
+    返回当前进程的pid
+*/
+uint64 sys_getpid()
+{
+
 }

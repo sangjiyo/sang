@@ -69,10 +69,37 @@ typedef struct trapframe
 typedef uint64 *pgtbl_t;
 typedef struct mmap_region mmap_region_t;
 
+
+/*
+    可能的进程状态转换：
+    UNUSED -> RUNNABLE 进程初始化
+    RUNNABLE -> RUNNIGN 进程获得CPU使用权
+    RUNNING -> RUNNABLE 进程失去CPU使用权
+    RUNNING -> SLEEPING 进程睡眠
+    SLEEPING -> RUNNABLE 进程苏醒
+    RUNNING -> ZOMBIE 进程宣布退出
+    ZOMBIE -> UNUSED 进程被父进程回收
+*/
+enum proc_state
+{
+    UNUSED,   // 未被使用
+    RUNNABLE, // 准备就绪
+    RUNNING,  // 运行中
+    SLEEPING, // 睡眠等待
+    ZOMBIE,   // 濒临死亡
+};
+
 // 进程
 typedef struct proc
 {
-    int pid; // 标识符
+    int pid;             // 标识符
+    char name[16];       // 进程名称
+
+    spinlock_t lk;         // 自旋锁, 保护下面4个字段
+    enum proc_state state; // 进程状态
+    struct proc *parent;   // 父进程
+    int exit_code;         // 进程退出状态(父进程关心)
+    void *sleep_space;     // 进程睡眠位置(等待的资源)
 
     pgtbl_t pgtbl;       // 用户态页表
     uint64 heap_top;     // 用户堆顶(以字节为单位)
@@ -83,3 +110,6 @@ typedef struct proc
     uint64 kstack;       // 内核栈的虚拟地址
     context_t ctx;       // 内核态进程上下文
 } proc_t;
+
+// 系统中最多同时存在N_PROC个进程
+#define N_PROC 32

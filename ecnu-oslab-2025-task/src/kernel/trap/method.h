@@ -9,10 +9,11 @@ void plic_complete(int irq); // 告知中断响应完成
 
 // CLINT相关 (时钟中断)
 
-void timer_init();           // 时钟初始化
-void timer_create();         // 时钟创建
-void timer_update();         // 时钟更新(ticks++)
-uint64 timer_get_ticks();    // 获取时钟的tick
+void timer_init();             // 时钟初始化
+void timer_create();           // 时钟创建
+void timer_update();           // 时钟更新(ticks++)
+uint64 timer_get_ticks();      // 获取时钟的tick
+void timer_wait(uint64 ntick); // 等待ntick
 
 // trap的初始化和处理逻辑
 
