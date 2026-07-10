@@ -4,3 +4,4 @@
 #include "../lib/mod.h"
 #include "../mem/mod.h"
 #include "../lock/mod.h"
+#include "../fs/mod.h"
