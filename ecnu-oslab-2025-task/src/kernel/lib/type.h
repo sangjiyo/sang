@@ -1,5 +1,6 @@
 #pragma once
 #include "../arch/type.h"
+#include "../proc/type.h"
 #include <stdarg.h>
 
 // the UART control registers.
@@ -32,8 +33,16 @@
 #define UART_BASE 0x10000000ul
 #define UART_IRQ 10
 
+// 帮助
+#define MAX(a, b) ((a) > (b) ? (a) : (b)) // 取大
+#define MIN(a, b) ((a) < (b) ? (a) : (b)) // 取小
+#define ALIGN_UP(addr, refer) (((addr) + (refer) - 1) & ~((refer) - 1)) // 向上对齐
+#define ALIGN_DOWN(addr, refer) ((addr) & ~((refer) - 1))               // 向下对齐
+
 typedef struct cpu
 {
-    int noff;   // 关中断的深度
-    int origin; // 第一次关中断前的状态
+    int noff;       // 关中断的深度
+    int origin;     // 第一次关中断前的状态
+    proc_t *proc;   // cpu上运行的进程
+    context_t ctx;  // 内核自身上下文
 } cpu_t;

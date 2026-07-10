@@ -45,6 +45,11 @@ typedef enum
 #define SSTATUS_UIE (1L << 0)
 
 /* Supervisor Interrupt Enable (sie) */
-#define SIE_SEIE (1L << 9) /* 外部中断 */
-#define SIE_STIE (1L << 5) /* 定时器中断 */
-#define SIE_SSIE (1L << 1) /* 软件中断 */
+#define SIE_SEIE (1L << 9) // S-mode 外设中断
+#define SIE_STIE (1L << 5) // S-mode 时钟中断
+#define SIE_SSIE (1L << 1) // S-mode 软件中断
+
+/* Machine-mode Interrupt Enable (mie) */
+#define MIE_MEIE (1L << 11) // M-mode 外设中断
+#define MIE_MTIE (1L << 7)  // M-mode 时钟中断
+#define MIE_MSIE (1L << 3)  // M-mode 软件中断
