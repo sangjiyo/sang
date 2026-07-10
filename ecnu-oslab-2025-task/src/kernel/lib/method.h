@@ -25,3 +25,4 @@ proc_t *myproc(void);
 void memset(void *begin, uint8 data, uint32 n);
 void memmove(void *dst, const void *src, uint32 n);
 int strncmp(const char *p, const char *q, uint32 n);
+int strlen(const char *str);

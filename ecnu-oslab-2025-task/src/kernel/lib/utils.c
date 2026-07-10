@@ -32,3 +32,12 @@ int strncmp(const char *p, const char *q, uint32 n)
         return 0;
     return (uint8)*p - (uint8)*q;
 }
+
+// 返回字符串长度
+int strlen(const char *str)
+{
+  int i = 0;
+  for (i = 0; str[i] != '\0'; i++)
+    ;
+  return i;
+}

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../arch/type.h"
 #include "../mem/type.h"
 
@@ -88,7 +88,7 @@ typedef struct disk {
 
 #define BLOCK_SIZE 4096              // 基本管理单位的大小
 #define N_BUFFER_TEST 8              // 测试时的N_BUFFER取值
-#define N_BUFFER N_BUFFER_TEST //(32 * 512)          // 最多可以用32MB内存空间(25%)作为Block缓冲区
+#define N_BUFFER (32 * 512)          // 最多可以用32MB内存空间(25%)作为Block缓冲区
 #define BLOCK_NUM_UNUSED 0xFFFFFFFF  // 未使用的Buffer需要将block_num设为这个值
 
 /* 以Block为单位在内存和磁盘间传递数据 */
@@ -134,16 +134,61 @@ typedef struct super_block {
     unsigned int data_blocks;                // data区域的块数量
 } super_block_t;
 
-/* 索引节点(64 Byte) */
+/* type的可能取值 */
+#define INODE_TYPE_DATA      0               // inode管理无结构的流式数据
+#define INODE_TYPE_DIR       1               // inode管理结构化的目录数据
+#define INODE_TYPE_DIVICE    2               // inode对应虚拟设备(不管理数据)
+
+/* major和minor的默认取值(代表磁盘设备) */
+#define INODE_MAJOR_DEFAULT   1              // 默认的主设备号
+#define INODE_MINOR_DEFAULT   1              // 默认的次设备号
+
+/* index字段相关 */
+#define INODE_INDEX_1        (10)                 // 直接映射 (10个格子)
+#define INODE_INDEX_2        (10+2)               // 一级间接映射 (2个格子)
+#define INODE_INDEX_3        (10+2+1)             // 二级间接映射 (1个格子)
+#define INODE_BLOCK_INDEX_1  (10)                 // 直接映射 (40KB)
+#define INODE_BLOCK_INDEX_2  (10+2048)            // 一级间接映射 (40KB + 8MB)
+#define INODE_BLOCK_INDEX_3  (10+2048+1024*1024)  // 二级间接映射 (40KB + 8MB + 4GB)
+
+/* 最大的size */
+#define INODE_MAX_SIZE (0xFFFFFFFF)
+
+/* 磁盘上的索引节点(64 Byte) */
 typedef struct inode_disk {
-    short type;                              // 文件类型
-    short major;                             // 主设备号
-    short minor;                             // 次设备号
-    short nlink;                             // 链接数
-    unsigned int size;                       // 文件数据长度(字节)
-    unsigned int index[13];                  // 数据存储位置(10+2+1)
+    short type;                          // 文件类型
+    short major;                         // 主设备号
+    short minor;                         // 次设备号
+    short nlink;                         // 链接数
+    unsigned int size;                   // 文件数据长度(字节)
+    unsigned int index[INODE_INDEX_3];   // 数据存储位置(10+2+1)
 } inode_disk_t;
 
+#define ROOT_INODE  0                 // 根节点的序号
+#define N_INODE     64                // 内存中最多存在的inode数量
+
+/* 内存里的索引节点 */
+typedef struct inode {
+    inode_disk_t disk_info;           // 持久化信息 (slk保护)
+    bool valid_info;                  // disk_info的有效性 (slk保护)
+    uint32 inode_num;                 // inode序号 (slk保护)
+    uint32 ref;                       // 引用数 (lk_inode_cache保护)
+    sleeplock_t slk;                  // 睡眠锁
+} inode_t;
+
+#define MAXLEN_FILENAME 60            // 文件名的最大长度
+#define INVALID_INODE_NUM 0xFFFFFFFF  // 无效inode_num
+
+/* 目录项(64 Byte) */
+typedef struct dentry {
+    char name[MAXLEN_FILENAME];       // 文件名
+    unsigned int inode_num;           // 索引节点序号
+} dentry_t;
+
+
+/* 辅助计算 */
 #define BIT_PER_BYTE 8
 #define BIT_PER_BLOCK (BLOCK_SIZE * BIT_PER_BYTE)
 #define INODE_PER_BLOCK (BLOCK_SIZE / sizeof(inode_disk_t))
+#define DENTRY_PER_BLOCK  (BLOCK_SIZE / sizeof(dentry_t))
+#define COUNT_BLOCKS(ele_num, ele_per_block)  (((ele_num) + (ele_per_block) - 1) / (ele_per_block)) 
