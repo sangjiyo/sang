@@ -1,5 +1,4 @@
 ﻿#include "mod.h"
-extern int alloc_cnt; // 在 mmap.c 中声明
 
 /*
     测试: 从用户空间传入一个int类型的数组
