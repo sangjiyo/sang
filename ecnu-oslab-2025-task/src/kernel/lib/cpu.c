@@ -13,3 +13,9 @@ int mycpuid(void)
     int hartid = r_tp();
     return hartid;
 }
+
+proc_t *myproc(void)
+{
+    int hartid = r_tp();
+    return cpus[hartid].proc;
+}
