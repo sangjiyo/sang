@@ -38,8 +38,22 @@ static int alloc_pid()
 static void proc_return()
 {
     proc_t* p = myproc();
+
     // 释放由 proc_scheduler 获取的进程锁
+    // 必须在fs_init之前释放, 否则磁盘I/O期间发生时钟中断时,
+    // proc_yield会尝试再次获取p->lk导致递归panic
     spinlock_release(&p->lk);
+
+    // 文件系统初始化: 只在第一次进入时执行 (由proczero完成)
+    // 必须在用户进程上下文中执行 (因为可能触发proc_sleep)
+    {
+        static bool fs_inited = false;
+        if (!fs_inited) {
+            fs_inited = true;
+            fs_init();
+        }
+    }
+
     // 跳转到用户态
     trap_user_return();
 }
@@ -462,7 +476,7 @@ void proc_sleep(void* sleep_space, spinlock_t* lock)
     p->state = SLEEPING;
 
     // 提示性输出: 进程进入睡眠
-    printf("proc %d is sleeping!\n", p->pid);
+    //printf("proc %d is sleeping!\n", p->pid);
 
     // 切换到调度器
     proc_sched();
@@ -488,7 +502,7 @@ void proc_wakeup(void* sleep_space)
         if (p->state == SLEEPING && p->sleep_space == sleep_space) {
             p->state = RUNNABLE;
             // 提示性输出: 进程被唤醒
-            printf("proc %d is wakeup!\n", p->pid);
+            //printf("proc %d is wakeup!\n", p->pid);
         }
         spinlock_release(&p->lk);
     }

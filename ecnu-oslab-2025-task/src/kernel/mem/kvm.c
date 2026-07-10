@@ -12,6 +12,10 @@ pte_t *vm_getpte(pgtbl_t pgtbl, uint64 va, bool alloc)
     if (va >= VA_MAX)
         panic("vm_getpte: va too large");
 
+    // 如果传入NULL, 使用内核页表 (供virtio_disk_rw等内核代码使用)
+    if (pgtbl == NULL)
+        pgtbl = kernel_pgtbl;
+
     pgtbl_t cur = pgtbl;
     for (int level = 2; level > 0; level--) {
         int idx = VA_TO_VPN(va, level);
@@ -130,6 +134,9 @@ void kvm_init()
     // 在用户和内核页表中使用相同的虚拟地址(TRAMPOLINE)，指向同一个物理页面
     extern char trampoline[];
     vm_mappages(kernel_pgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+
+    // 映射虚拟磁盘 VIRTIO MMIO 寄存器区域
+    vm_mappages(kernel_pgtbl, VIRTIO_BASE, VIRTIO_BASE, PGSIZE, PTE_R | PTE_W);
 
     // 分配并映射所有进程的内核栈 (每个进程一个内核栈页面)
     // KSTACK(procid) 的设计中, 相邻内核栈之间间隔一个 guard page (未映射, 防止栈溢出)

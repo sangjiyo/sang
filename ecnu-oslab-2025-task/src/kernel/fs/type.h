@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../arch/type.h"
 #include "../mem/type.h"
 
@@ -88,7 +88,7 @@ typedef struct disk {
 
 #define BLOCK_SIZE 4096              // 基本管理单位的大小
 #define N_BUFFER_TEST 8              // 测试时的N_BUFFER取值
-#define N_BUFFER (32 * 512)          // 最多可以用32MB内存空间(25%)作为Block缓冲区
+#define N_BUFFER N_BUFFER_TEST //(32 * 512)          // 最多可以用32MB内存空间(25%)作为Block缓冲区
 #define BLOCK_NUM_UNUSED 0xFFFFFFFF  // 未使用的Buffer需要将block_num设为这个值
 
 /* 以Block为单位在内存和磁盘间传递数据 */

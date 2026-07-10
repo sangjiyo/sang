@@ -1,4 +1,4 @@
-﻿#include "mod.h"
+#include "mod.h"
 
 /*
     用户堆空间伸缩
@@ -15,8 +15,6 @@ uint64 sys_brk()
 
     // 查询当前堆顶
     if (new_heap_top == 0) {
-        //printf("look event: ret_heap_top = %x\n", old_heap_top);
-        //vm_print(p->pgtbl);
         return old_heap_top;
     }
 
@@ -30,8 +28,6 @@ uint64 sys_brk()
         uint32 inc = new_heap_top - old_heap_top;
         uint64 ret = uvm_heap_grow(p->pgtbl, old_heap_top, inc);
         p->heap_top = ret;
-        //printf("grow event: ret_heap_top = %x\n", ret);
-        //vm_print(p->pgtbl);
         return ret;
     }
     // 收缩
@@ -39,14 +35,10 @@ uint64 sys_brk()
         uint32 dec = old_heap_top - new_heap_top;
         uint64 ret = uvm_heap_ungrow(p->pgtbl, old_heap_top, dec);
         p->heap_top = ret;
-        //printf("ungrow event: ret_heap_top = %x\n", ret);
-        //vm_print(p->pgtbl);
         return ret;
     }
 
     // 相等
-    //printf("equal event: ret_heap_top = %x\n", old_heap_top);
-    //vm_print(p->pgtbl);
     return old_heap_top;
 }
 
@@ -71,9 +63,6 @@ uint64 sys_mmap()
     // 调用 uvm_mmap，内部会检查范围并自动分配/映射
     uvm_mmap(begin, npages, PTE_R | PTE_W);
     proc_t* p = myproc();
-    //uvm_show_mmaplist(p->mmap);
-    //vm_print(p->pgtbl);
-    //printf("\n");
     mmap_region_t* last = p->mmap;
     while (last && last->next) last = last->next;
     if (begin == 0 && last) {
@@ -99,10 +88,6 @@ uint64 sys_munmap()
         return -1;
     }
     uvm_munmap(begin, npages);
-    //proc_t* p = myproc();
-    //uvm_show_mmaplist(p->mmap);
-    //vm_print(p->pgtbl);
-    //printf("\n");
     return 0;
 }
 
@@ -186,7 +171,7 @@ uint64 sys_getpid()
 */
 uint64 sys_alloc_block()
 {
-
+    return bitmap_alloc_block();
 }
 
 /*
@@ -196,16 +181,19 @@ uint64 sys_alloc_block()
 */
 uint64 sys_free_block()
 {
-
+    uint32 block_num;
+    arg_uint32(0, &block_num);
+    bitmap_free_block(block_num);
+    return 0;
 }
 
 /*
     从inode_bitmap申请1个inode (测试inode_bitmap_alloc)
-    返回block序号
+    返回inode序号
 */
 uint64 sys_alloc_inode()
 {
-
+    return bitmap_alloc_inode();
 }
 
 /*
@@ -215,7 +203,10 @@ uint64 sys_alloc_inode()
 */
 uint64 sys_free_inode()
 {
-
+    uint32 inode_num;
+    arg_uint32(0, &inode_num);
+    bitmap_free_inode(inode_num);
+    return 0;
 }
 
 /*
@@ -225,7 +216,12 @@ uint64 sys_free_inode()
 */
 uint64 sys_show_bitmap()
 {
-
+    uint32 choose;
+    arg_uint32(0, &choose);
+    if (choose > 1)
+        return -1;
+    bitmap_print(choose == 0 ? true : false);
+    return 0;
 }
 
 /*
@@ -235,7 +231,10 @@ uint64 sys_show_bitmap()
 */
 uint64 sys_get_block()
 {
-
+    uint32 block_num;
+    arg_uint32(0, &block_num);
+    buffer_t *buf = buffer_get(block_num);
+    return (uint64)buf;
 }
 
 /*
@@ -245,18 +244,30 @@ uint64 sys_get_block()
 */
 uint64 sys_put_block()
 {
-
+    uint64 addr_buf;
+    arg_uint64(0, &addr_buf);
+    buffer_put((buffer_t*)addr_buf);
+    return 0;
 }
 
 /*
     将buf->data拷贝到用户空间 (测试buffer_read)
-    uint64 addr_buf 使用的buffer  
+    uint64 addr_buf 使用的buffer
     uint64 addr_data 用户数据区 (copy dst)
     成功返回0
 */
 uint64 sys_read_block()
 {
+    uint64 addr_buf, addr_data;
+    arg_uint64(0, &addr_buf);
+    arg_uint64(1, &addr_data);
 
+    buffer_t *buf = (buffer_t*)addr_buf;
+    proc_t *p = myproc();
+
+    // 将buf->data拷贝到用户空间
+    uvm_copyout(p->pgtbl, addr_data, (uint64)buf->data, BLOCK_SIZE);
+    return 0;
 }
 
 /*
@@ -267,7 +278,19 @@ uint64 sys_read_block()
 */
 uint64 sys_write_block()
 {
+    uint64 addr_buf, addr_data;
+    arg_uint64(0, &addr_buf);
+    arg_uint64(1, &addr_data);
 
+    buffer_t *buf = (buffer_t*)addr_buf;
+    proc_t *p = myproc();
+
+    // 将用户空间数据拷贝到buf->data
+    uvm_copyin(p->pgtbl, (uint64)buf->data, addr_data, BLOCK_SIZE);
+
+    // 写入磁盘
+    buffer_write(buf);
+    return 0;
 }
 
 /*
@@ -276,7 +299,8 @@ uint64 sys_write_block()
 */
 uint64 sys_show_buffer()
 {
-
+    buffer_print_info();
+    return 0;
 }
 
 /*
@@ -286,5 +310,8 @@ uint64 sys_show_buffer()
 */
 uint64 sys_flush_buffer()
 {
-
+    uint32 buffer_count;
+    arg_uint32(0, &buffer_count);
+    buffer_freemem(buffer_count);
+    return 0;
 }

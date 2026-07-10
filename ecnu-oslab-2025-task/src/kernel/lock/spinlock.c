@@ -31,12 +31,15 @@ void pop_off(void)
         intr_on();
 }
 
+// 未持有锁时的cpuid标记 (不能用0, 因为0是合法cpuid)
+#define LOCK_UNUSED (-1)
+
 // 自旋锁初始化
-void spinlock_init(spinlock_t *lk, char *name)
+void spinlock_init(spinlock_t* lk, char* name)
 {
     lk->name = name;
     lk->locked = 0;
-    lk->cpuid = 0;
+    lk->cpuid = LOCK_UNUSED;
 }
 
 // 是否持有自旋锁

@@ -126,6 +126,10 @@ void external_interrupt_handler()
         uart_intr();
         plic_complete(irq);
     }
+    else if (irq == VIRTIO_IRQ) {
+        virtio_disk_intr();
+        plic_complete(irq);
+    }
     else {
         // 其他外设中断可后续扩展
         if (irq) plic_complete(irq);
