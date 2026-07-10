@@ -76,8 +76,18 @@ void trap_kernel_handler()
     uint64 scause = r_scause();   // 引发trap的原因
     uint64 stval = r_stval();     // 发生trap时保存的附加信息 (不同trap类型不一样)
 
-    // 确认trap来自S-mode且此时trap处于关闭状态
-    assert(sstatus & SSTATUS_SPP, "trap_kernel_handler: not from s-mode");
+    // 如果trap来自U-mode (SPP=0), 说明在stvec切换边界处到达
+    // (stvec还是kernel_vector但CPU已进入U-mode).
+    // 不能直接调用trap_user_handler (寄存器保存格式不同)
+    // 只处理时钟中断, 其他情况直接返回让用户态重试
+    if (!(sstatus & SSTATUS_SPP)) {
+        if ((scause & 0x8000000000000000ul) && (scause & 0xf) == 1) {
+            // 时钟中断: 处理但不yield (没有正确的trapframe上下文)
+            timer_interrupt_handler();
+        }
+        return;
+    }
+
     assert(intr_get() == 0, "trap_kernel_handler: interreput enabled");
 
     int trap_id = scause & 0xf;
@@ -102,7 +112,7 @@ void trap_kernel_handler()
             break;
         default: // 例外处理
             printf("\nunexpected interrupt: %s\n", interrupt_info[trap_id]);
-            printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);
+            printf("trap_id = %d, sepc = %x, stval = %x\n", trap_id, sepc, stval);
             panic("trap_kernel_handler");
         }
     } else {
@@ -112,7 +122,7 @@ void trap_kernel_handler()
 
         default: // 例外处理
             printf("\nunexpected exception: %s\n", exception_info[trap_id]);
-            printf("trap_id = %d, sepc = %p, stval = %p\n", trap_id, sepc, stval);
+            printf("trap_id = %d, sepc = %x, stval = %x\n", trap_id, sepc, stval);
             panic("trap_kernel_handler");
         }
     }

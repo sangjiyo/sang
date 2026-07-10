@@ -487,8 +487,6 @@ void proc_wakeup(void* sleep_space)
         spinlock_acquire(&p->lk);
         if (p->state == SLEEPING && p->sleep_space == sleep_space) {
             p->state = RUNNABLE;
-            // 提示性输出: 进程被唤醒
-            printf("proc %d is wakeup!\n", p->pid);
         }
         spinlock_release(&p->lk);
     }
