@@ -25,20 +25,24 @@ void pmem_init(void)
     kern_region.allocable = (kern_region.end - kern_region.begin) / PGSIZE;
     user_region.allocable = (user_region.end - user_region.begin) / PGSIZE;
 
-    // 构建空闲链表（将每个物理页作为节点插入）
-    // 注意：使用头插法，顺序不重要
+    // 构建空闲链表: 逆序遍历(高→低) + 头插法 → 获得低→高的链表顺序
+    // pmem_free也使用头插法, 保持一致性
     page_node_t* node;
     uint64 pa;
 
-    // 内核区
-    for (pa = kern_region.begin; pa < kern_region.end; pa += PGSIZE) {
+    // 内核区: 从end-PGSIZE逆序遍历到begin, 每次头插
+    kern_region.list_head.next = NULL;
+    for (uint32 i = 0; i < kern_region.allocable; i++) {
+        pa = kern_region.end - (i + 1) * PGSIZE;
         node = (page_node_t*)pa;
         node->next = kern_region.list_head.next;
         kern_region.list_head.next = node;
     }
 
-    // 用户区
-    for (pa = user_region.begin; pa < user_region.end; pa += PGSIZE) {
+    // 用户区: 同样逆序头插
+    user_region.list_head.next = NULL;
+    for (uint32 i = 0; i < user_region.allocable; i++) {
+        pa = user_region.end - (i + 1) * PGSIZE;
         node = (page_node_t*)pa;
         node->next = user_region.list_head.next;
         user_region.list_head.next = node;

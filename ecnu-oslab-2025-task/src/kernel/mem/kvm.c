@@ -140,10 +140,12 @@ void kvm_init()
 
     // 分配并映射所有进程的内核栈 (每个进程一个内核栈页面)
     // KSTACK(procid) 的设计中, 相邻内核栈之间间隔一个 guard page (未映射, 防止栈溢出)
-    for (int i = 0; i < N_PROC; i++) {
-        uint64 kstack_pa = (uint64)pmem_alloc(true);
-        vm_mappages(kernel_pgtbl, KSTACK(i), kstack_pa, PGSIZE, PTE_R | PTE_W);
-    }
+    // 先批量分配物理页保证连续, 再逐个映射(映射过程会分配页表但不破坏物理连续性)
+    uint64 kstack_pas[N_PROC];
+    for (int i = 0; i < N_PROC; i++)
+        kstack_pas[i] = (uint64)pmem_alloc(true);
+    for (int i = 0; i < N_PROC; i++)
+        vm_mappages(kernel_pgtbl, KSTACK(i), kstack_pas[i], PGSIZE, PTE_R | PTE_W);
 
 }
 

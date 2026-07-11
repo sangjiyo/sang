@@ -68,8 +68,9 @@ void virtio_disk_init()
     //     └─ used ring   (设备完成请求后填入的队列)
 
     disk.desc = (vring_desc_t*)disk.pages;
-    disk.avail = (uint16*)(((char *)disk.desc) + VIRTIO_NUM * sizeof(vring_desc_t));
+    disk.avail = (uint16*)(((char*)disk.desc) + VIRTIO_NUM * sizeof(vring_desc_t));
     disk.used = (used_area_t*)(disk.pages + PGSIZE);
+    disk.used_idx = 0;
 
     for (int i = 0; i < VIRTIO_NUM; i++)
         disk.free[i] = 1;
@@ -111,7 +112,7 @@ static void free_chain(int i)
     }
 }
 
-static int alloc3_desc(int *idx)
+static int alloc3_desc(int* idx)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -126,7 +127,7 @@ static int alloc3_desc(int *idx)
 }
 
 /* 基于buffer的block读写操作 */
-void virtio_disk_rw(buffer_t *b, bool write)
+void virtio_disk_rw(buffer_t* b, bool write)
 {
     uint64 sector = b->block_num * (BLOCK_SIZE / 512);
 
@@ -166,7 +167,7 @@ void virtio_disk_rw(buffer_t *b, bool write)
     // thus the call to kvmpa().
     uint64 addr = ALIGN_DOWN((uint64)&buf0, PGSIZE);
     uint64 off = ((uint64)&buf0) % PGSIZE;
-    pte_t *pte = vm_getpte(NULL, addr, false);
+    pte_t* pte = vm_getpte(NULL, addr, false);
 
     disk.desc[idx[0]].addr = (uint64)PTE_TO_PA(*pte) + off;
     disk.desc[idx[0]].len = sizeof(buf0);
@@ -224,7 +225,7 @@ void virtio_disk_intr()
         if (disk.info[id].status != 0)
             panic("virtio_disk_intr status");
 
-        disk.info[id].b->disk = false; // disk is done with buf
+        disk.info[id].b->disk = false;
         proc_wakeup(disk.info[id].b);
 
         disk.used_idx = (disk.used_idx + 1) % VIRTIO_NUM;

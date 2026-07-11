@@ -55,14 +55,15 @@ bool spinlock_holding(spinlock_t* lk)
 void spinlock_acquire(spinlock_t* lk)
 {
     push_off();
-    // 添加内存屏障: 确保在检查holding之前, 其他CPU对lk的释放操作已可见
-    // 防止弱内存模型下读到stale cpuid值导致的误判递归锁
+    // TAS带获取语义(acquire). 先竞争锁, 成功后再检查
+    // 避免在TAS之前读lk->locked/lk->cpuid导致的弱内存stale问题
+    while (__sync_lock_test_and_set(&lk->locked, 1) != 0)
+        ;
+    // fence保证TAS结果对后续load可见
     __sync_synchronize();
-    if (spinlock_holding(lk)) {
+    // 此时已独占该锁, 安全检查递归持有
+    if (spinlock_holding(lk))
         panic("acquire");
-    }
-    while (__sync_lock_test_and_set(&lk->locked, 1) != 0);
-    __sync_synchronize();
     lk->cpuid = mycpuid();
 }
 

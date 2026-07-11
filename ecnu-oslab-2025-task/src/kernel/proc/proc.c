@@ -475,8 +475,9 @@ void proc_sleep(void* sleep_space, spinlock_t* lock)
     p->sleep_space = sleep_space;
     p->state = SLEEPING;
 
-    // 提示性输出: 进程进入睡眠
-    //printf("proc %d is sleeping!\n", p->pid);
+    // 内存屏障: 确保sleep_space和state的写入对跨核proc_wakeup可见
+    // 否则弱内存模型下CPU1可能看到state=SLEEPING但sleep_space=stale → lost wakeup
+    __sync_synchronize();
 
     // 切换到调度器
     proc_sched();
@@ -527,9 +528,16 @@ void proc_sched()
     if (intr_get())
         panic("proc_sched: interruptible");
 
+    // 保存intena: 调度器可能在swtch期间修改noff/intena,
+    // 进程恢复时需要恢复原来的中断使能状态 (rv6的做法)
+    int saved_intena = c->origin;
+
     // 保存当前进程上下文, 切换到CPU调度器上下文
     // swtch返回时, 意味着该进程被调度器再次选中
     swtch(&p->ctx, &c->ctx);
+
+    // 恢复intena
+    c->origin = saved_intena;
 }
 
 /*
