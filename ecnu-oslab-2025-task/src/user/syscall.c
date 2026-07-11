@@ -196,3 +196,11 @@ uint32 sys_unlink(char *path)
 {
 	return syscall(SYS_unlink, path);
 }
+
+/*
+    获取系统运行时间 (ticks)
+*/
+uint64 sys_uptime()
+{
+    return syscall(SYS_uptime);
+}

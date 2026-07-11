@@ -24,6 +24,7 @@ static uint64 (*syscalls[])(void) = {
     [SYS_print_cwd] sys_print_cwd,
     [SYS_link] sys_link,
     [SYS_unlink] sys_unlink,
+    [SYS_uptime] sys_uptime,
 };
 
 // 基于系统调用表的请求跳转

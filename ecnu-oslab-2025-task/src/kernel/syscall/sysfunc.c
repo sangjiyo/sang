@@ -450,3 +450,12 @@ uint64 sys_unlink()
 
     return path_unlink(path);
 }
+
+/*
+    获取系统运行时间 (ticks)
+    返回当前的tick数
+*/
+uint64 sys_uptime()
+{
+    return timer_get_ticks();
+}

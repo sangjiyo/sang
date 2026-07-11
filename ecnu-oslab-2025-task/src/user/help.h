@@ -84,6 +84,7 @@ uint32 sys_chdir(char *new_path);
 uint32 sys_print_cwd();
 uint32 sys_link(char *old_path, char *new_path);
 uint32 sys_unlink(char *path);
+uint64 sys_uptime();
 
 /* 第二类: 其他辅助函数 */
 

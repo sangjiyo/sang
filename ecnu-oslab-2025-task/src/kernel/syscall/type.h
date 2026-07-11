@@ -25,8 +25,9 @@
 #define SYS_print_cwd 20        // 打印工作目录的绝对路径
 #define SYS_link 21             // 建立硬链接
 #define SYS_unlink 22           // 解除硬链接
+#define SYS_uptime 23           // 获取系统运行时间
 
-#define SYS_MAX_NUM 22
+#define SYS_MAX_NUM 23
 
 /* 可以传入的最大字符串长度 */
 #define STR_MAXLEN 127

@@ -20,3 +20,4 @@
 #define SYS_print_cwd 20        // 打印工作目录的绝对路径
 #define SYS_link 21             // 建立硬链接
 #define SYS_unlink 22           // 解除硬链接
+#define SYS_uptime 23           // 获取系统运行时间
