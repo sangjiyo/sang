@@ -1,22 +1,22 @@
-#define SYS_brk 1           // 调整堆边界
-#define SYS_mmap 2          // 创建内存映射
-#define SYS_munmap 3        // 解除内存映射
-#define SYS_print_str 4     // 打印字符串
-#define SYS_print_int 5     // 打印32位整数
-#define SYS_getpid 6        // 获取当前进程的ID
-#define SYS_fork 7          // 进程复制
-#define SYS_wait 8          // 等待子进程退出
-#define SYS_exit 9          // 进程退出
-#define SYS_sleep 10        // 进程睡眠一段时间
-#define SYS_alloc_block 11  // 从data_bitmap申请1个block (测试data_bitmap_alloc)
-#define SYS_free_block 12   // 向data_bitmap释放1个block (测试data_bitmap_free)
-#define SYS_alloc_inode 13  // 从inode_bitmap申请1个inode (测试inode_bitmap_alloc)
-#define SYS_free_inode 14   // 向inode_bitmap释放1个inode (测试inode_bitmap_free)
-#define SYS_show_bitmap 15  // 输出目标bitmap的状态
-#define SYS_get_block 16    // 获取1个描述block的buffer (测试buffer_get)
-#define SYS_read_block 17   // 将buf->data拷贝到用户空间
-#define SYS_write_block 18  // 基于用户地址空间更新buffer->data并写入磁盘 (测试buffer_write)
-#define SYS_put_block 19    // 释放1个描述block的buffer (测试buffer_put)
-#define SYS_show_buffer 20  // 输出buffer链表的状态
-#define SYS_flush_buffer 21 // 释放非活跃链表中buffer持有的物理内存资源 (测试buffer_freemem)
-
+#define SYS_brk 1               // 调整堆边界
+#define SYS_mmap 2              // 创建内存映射
+#define SYS_munmap 3            // 解除内存映射
+#define SYS_fork 4              // 进程复制
+#define SYS_wait 5              // 等待子进程退出
+#define SYS_exit 6              // 进程退出
+#define SYS_sleep 7             // 进程睡眠一段时间
+#define SYS_getpid 8            // 获取当前进程的ID
+#define SYS_exec 9              // 执行ELF文件
+#define SYS_open 10             // 打开文件
+#define SYS_close 11            // 关闭文件
+#define SYS_read 12             // 读取文件
+#define SYS_write 13            // 写入文件
+#define SYS_lseek 14            // 移动读写指针
+#define SYS_dup 15              // 复制文件权限
+#define SYS_fstat 16            // 获取文件状态信息
+#define SYS_get_dentries 17     // 获取目录下所有有效目录项
+#define SYS_mkdir 18            // 创建目录文件
+#define SYS_chdir 19            // 切换工作目录
+#define SYS_print_cwd 20        // 打印工作目录的绝对路径
+#define SYS_link 21             // 建立硬链接
+#define SYS_unlink 22           // 解除硬链接

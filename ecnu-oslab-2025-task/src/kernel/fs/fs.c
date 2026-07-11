@@ -2,6 +2,70 @@
 
 super_block_t sb; /* 超级块 */
 
+file_t file_table[N_FILE]; // 文件资源池
+spinlock_t lk_file_table; // 保护它的锁
+
+/* 初始化file_table */
+void file_init()
+{
+
+}
+
+/* 从file_table中获取1个空闲file */
+file_t* file_alloc()
+{
+
+}
+
+/*
+	根据路径打开文件 (指定打开模式)
+	成功返回file, 失败返回NULL
+*/
+file_t* file_open(char *path, uint32 open_mode)
+{
+
+}
+
+/* 关闭文件 */
+void file_close(file_t *file)
+{
+
+}
+
+/* 读取文件内容, 返回读到的字节数量 */
+uint32 file_read(file_t* file, uint32 len, uint64 dst, bool is_user_dst)
+{
+
+}
+
+/* 读取文件内容, 返回读到的字节数量 */
+uint32 file_write(file_t* file, uint32 len, uint64 src, bool is_user_src)
+{
+
+}
+
+/* 
+	读/写指针的移动
+	对于不合理的lseek_offset, 只做尽力而为的移动
+	返回新的file->offset
+*/
+uint32 file_lseek(file_t *file, uint32 lseek_offset, uint32 lseek_flag)
+{
+
+}
+
+/* file->ref++ with lock protect */
+file_t* file_dup(file_t* file)
+{
+
+}
+
+/* 获取文件参数, 成功返回0, 失败返回-1 */
+uint32 file_get_stat(file_t* file, uint64 user_dst)
+{
+
+}
+
 /* 基于superblock输出磁盘布局信息 (for debug) */
 static void sb_print()
 {
@@ -39,92 +103,4 @@ void fs_init()
 
     // 5. 初始化inode缓存
     inode_init();
-
-    // ===== 测试代码 =====
-    // 请根据需要选择测试1/2/3/4
-
-			/* fs_init in fs.c */
-
-	printf("============= test begin =============\n\n");
-
-	inode_t* ip_1, * ip_2;
-	uint32 len, cut_len;
-
-	/* 小批量读写测试 */
-
-	int small_src[10], small_dst[10];
-	for (int i = 0; i < 10; i++)
-		small_src[i] = i;
-
-	ip_1 = inode_create(INODE_TYPE_DATA, INODE_MAJOR_DEFAULT, INODE_MINOR_DEFAULT);
-	inode_lock(ip_1);
-	inode_print(ip_1, "small_data");
-
-	printf("writing data...\n\n");
-	cut_len = 10 * sizeof(int);
-	for (uint32 offset = 0; offset < 400 * cut_len; offset += cut_len) {
-		len = inode_write_data(ip_1, offset, cut_len, small_src, false);
-		assert(len == cut_len, "write fail 1!");
-	}
-	inode_print(ip_1, "small_data");
-
-	len = inode_read_data(ip_1, 120 * cut_len + 4, cut_len, small_dst, false);
-	assert(len == cut_len, "read fail 1!");
-	printf("read data:");
-	for (int i = 0; i < 10; i++)
-		printf(" %d", small_dst[i]);
-	printf("\n\n");
-
-	ip_1->disk_info.nlink = 0;
-	inode_unlock(ip_1);
-	inode_put(ip_1);
-
-	/* 大批量读写测试 */
-
-	char* big_src, big_dst[9];
-	big_dst[8] = 0;
-
-	/* 申请五个连续物理页面 (初始化阶段, 通常来说能拿到连续的) */
-	big_src = pmem_alloc(true);
-	assert(pmem_alloc(true) == big_src + PGSIZE, "contiguous fail!");
-	assert(pmem_alloc(true) == big_src + PGSIZE * 2, "contiguous fail!");
-	assert(pmem_alloc(true) == big_src + PGSIZE * 3, "contiguous fail!");
-	assert(pmem_alloc(true) == big_src + PGSIZE * 4, "contiguous fail!");
-
-	for (uint32 i = 0; i < 5 * (PGSIZE / 8); i++)
-		for (uint32 j = 0; j < 8; j++)
-			big_src[i * 8 + j] = 'A' + j;
-
-	ip_2 = inode_create(INODE_TYPE_DATA, INODE_MAJOR_DEFAULT, INODE_MINOR_DEFAULT);
-	inode_lock(ip_2);
-	inode_print(ip_2, "big_data");
-
-	printf("writing data...\n\n");
-	cut_len = PGSIZE * 4 + 1110;
-	for (uint32 offset = 0; offset < cut_len * 10000; offset += cut_len)
-	{
-		len = inode_write_data(ip_2, offset, cut_len, big_src, false);
-		assert(len == cut_len, "write fail 2!");
-	}
-	inode_print(ip_2, "big_data");
-
-	len = inode_read_data(ip_1, cut_len * 10000 - 8, 8, big_dst, false);
-	assert(len == 8, "read fail 2");
-	printf("read data: %s\n", big_dst);
-
-
-	ip_2->disk_info.nlink = 0;
-	inode_unlock(ip_2);
-	inode_put(ip_2);
-
-	pmem_free((uint64)big_src, true);
-	pmem_free((uint64)big_src + PGSIZE, true);
-	pmem_free((uint64)big_src + PGSIZE * 2, true);
-	pmem_free((uint64)big_src + PGSIZE * 3, true);
-	pmem_free((uint64)big_src + PGSIZE * 4, true);
-
-
-	printf("============= test end =============\n");
-
-	while (1);
 }

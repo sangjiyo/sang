@@ -7,6 +7,13 @@ void printf(const char *fmt, ...);
 void panic(const char *s);
 void assert(bool condition, const char *warning);
 
+/* console.c: 控制台 */
+
+void cons_init();
+uint32 cons_write(uint32 len, uint64 src, bool is_user_src);
+uint32 cons_read(uint32 len, uint64 dst, bool is_user_dst);
+void cons_edit(int c);
+
 /* uart.c: UART驱动函数 */
 
 void uart_init(void);

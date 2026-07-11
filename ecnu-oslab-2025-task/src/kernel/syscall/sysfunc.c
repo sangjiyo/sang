@@ -315,3 +315,169 @@ uint64 sys_flush_buffer()
     buffer_freemem(buffer_count);
     return 0;
 }
+
+/*
+    执行ELF文件以替换当前进程的内容
+    char *path
+    char **argv
+    成功返回argc, 失败返回-1
+*/
+uint64 sys_exec()
+{
+
+}
+
+/* 构建fd->file的映射, 返回fd */
+static uint32 alloc_fd(file_t *file)
+{
+    proc_t *p = myproc();
+    for (uint32 i = 0; i < N_OPEN_FILE_PER_PROC; i++)
+    {
+        if (p->open_file[i] == NULL) {
+            p->open_file[i] = file;
+            return i;
+        }
+    }
+    return -1;
+}
+
+/*
+    打开或创建文件
+    char *path
+    uint32 open_mode
+    成功返回fd, 失败返回-1
+*/
+uint64 sys_open()
+{
+
+}
+
+/*
+    关闭文件
+    uint32 fd
+    成功返回0, 失败返回-1
+*/
+uint64 sys_close()
+{
+
+}
+
+/*
+    读取文件内容
+    uint32 fd
+    uint32 len
+    uint64 addr
+    成功返回读到的字节数, 失败返回0
+*/
+uint64 sys_read()
+{
+
+}
+
+/*
+    写入文件内容
+    uint32 fd
+    uint32 len
+    uint64 addr
+    成功返回写入的字节数, 失败返回0
+*/
+uint64 sys_write()
+{
+
+}
+
+/*
+    调整读写指针位置
+    uint32 fd
+    uint32 offset
+    uint32 flag
+    成功返回新的偏移量, 失败返回-1
+*/
+uint64 sys_lseek()
+{
+
+}
+
+/*
+    复制文件控制权
+    uinr32 fd
+    成功返回new_fd, 失败返回-1
+*/
+uint64 sys_dup()
+{
+
+}
+
+/*
+    获取文件信息
+    uint32 fd
+    uint64 addr
+    成功返回0, 失败返回-1
+*/
+uint64 sys_fstat()
+{
+
+}
+
+/*
+    获取目录中的所有目录项信息
+    uint32 fd
+    uint64 addr
+    uint32 buffer_len
+    成功返回读到的字节数, 失败返回-1
+*/
+uint64 sys_get_dentries()
+{
+
+}
+
+/*
+    创建目录
+    char *path
+    成功返回0, 失败返回-1
+*/
+uint64 sys_mkdir()
+{
+
+}
+
+/*
+    修改当前工作目录
+    char *new_path
+    成功返回0, 失败返回-1
+*/
+uint64 sys_chdir()
+{
+
+}
+
+/*
+    打印当前工作目录的绝对路径
+    成功返回0, 失败返回-1
+*/
+uint64 sys_print_cwd()
+{
+
+}
+
+/*
+    新建链接
+    char *old_path
+    char *new_path
+    成功返回0, 失败返回-1
+*/
+uint64 sys_link()
+{
+
+}
+
+
+/*
+    删除链接 (可能触发删除文件)
+    char *path
+    成功返回0, 失败返回-1
+*/
+uint64 sys_unlink()
+{
+
+}

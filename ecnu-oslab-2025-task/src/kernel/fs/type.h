@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../arch/type.h"
 #include "../mem/type.h"
 
@@ -88,7 +88,7 @@ typedef struct disk {
 
 #define BLOCK_SIZE 4096              // 基本管理单位的大小
 #define N_BUFFER_TEST 8              // 测试时的N_BUFFER取值
-#define N_BUFFER N_BUFFER_TEST//(32 * 512)          // 最多可以用32MB内存空间(25%)作为Block缓冲区
+#define N_BUFFER (32 * 512)          // 最多可以用32MB内存空间(25%)作为Block缓冲区
 #define BLOCK_NUM_UNUSED 0xFFFFFFFF  // 未使用的Buffer需要将block_num设为这个值
 
 /* 以Block为单位在内存和磁盘间传递数据 */
@@ -135,13 +135,19 @@ typedef struct super_block {
 } super_block_t;
 
 /* type的可能取值 */
-#define INODE_TYPE_DATA      0               // inode管理无结构的流式数据
-#define INODE_TYPE_DIR       1               // inode管理结构化的目录数据
-#define INODE_TYPE_DIVICE    2               // inode对应虚拟设备(不管理数据)
+#define INODE_TYPE_DATA       0              // inode管理无结构的流式数据
+#define INODE_TYPE_DIR        1              // inode管理结构化的目录数据
+#define INODE_TYPE_DIVICE     2              // inode对应虚拟设备(不管理数据)
 
-/* major和minor的默认取值(代表磁盘设备) */
-#define INODE_MAJOR_DEFAULT   1              // 默认的主设备号
-#define INODE_MINOR_DEFAULT   1              // 默认的次设备号
+/* major和minor的可能取值 */
+#define INODE_MAJOR_DEFAULT   1              // 默认的主设备号 (不属于设备文件)
+#define INODE_MAJOR_STDIN     2              // 常规设备文件 (/dev/stdin, 可读)
+#define INODE_MAJOR_STDOUT    3              // 常规设备文件 (/dev/stdout, 可写)
+#define INODE_MAJOR_STDERR    4              // 参观设备文件 (/dev/stderr, 可写)
+#define INODE_MAJOR_ZERO      5              // 特殊设备文件 (/dev/zero, 可读)
+#define INODE_MAJOR_NULL      6              // 特殊设备文件 (/dev/null, 可读可写)
+#define INODE_MAJOR_GPT0      7              // 特殊设备文件 (/dev/gpt0, 可写)
+#define INODE_MINOR_DEFAULT   1              // 默认的次设备号 (所有文件都使用它)
 
 /* index字段相关 */
 #define INODE_INDEX_1        (10)                 // 直接映射 (10个格子)
@@ -185,10 +191,45 @@ typedef struct dentry {
     unsigned int inode_num;           // 索引节点序号
 } dentry_t;
 
-
 /* 辅助计算 */
 #define BIT_PER_BYTE 8
 #define BIT_PER_BLOCK (BLOCK_SIZE * BIT_PER_BYTE)
 #define INODE_PER_BLOCK (BLOCK_SIZE / sizeof(inode_disk_t))
 #define DENTRY_PER_BLOCK  (BLOCK_SIZE / sizeof(dentry_t))
 #define COUNT_BLOCKS(ele_num, ele_per_block)  (((ele_num) + (ele_per_block) - 1) / (ele_per_block)) 
+
+
+#define FILE_OPEN_CREATE 0x01  // 打开文件时, 若文件不存在则创建新的
+#define FILE_OPEN_READ   0x02  // 打开文件时, 要求文件可读
+#define FILE_OPEN_WRITE  0x04  // 打开文件时, 要求文件可写
+
+#define FILE_LSEEK_SET   0     // file->offset = lseek_offset
+#define FILE_LSEEK_ADD   1     // file->offset += lseek_offset
+#define FILE_LSEEK_SUB   2     // file->offset -= lseek_offset
+
+typedef struct file {
+    inode_t *ip;        // 对应的inode
+    bool readable;      // 是否可读
+    bool writbale;      // 是否可写
+    uint32 offset;      // 读/写指针的偏移量
+    uint32 ref;         // 引用数 (lk_file_table保护)
+} file_t;
+
+#define N_FILE 128      // file_table中file的数量
+
+typedef struct file_stat {
+    uint16 type;        // inode_disk->type
+    uint16 nlink;       // inode_disk->nlink
+    uint32 size;        // inode_disk->size
+    uint32 inode_num;   // inode->inode_num
+    uint32 offset;      // file->offset
+} file_stat_t;
+
+typedef struct device {
+    char name[MAXLEN_FILENAME];                                 // 设备名称
+    uint32 (*read)(uint32 len, uint64 dst, bool is_user_dst);   // 设备读操作函数
+    uint32 (*write)(uint32 len, uint64 src, bool is_user_src);  // 设备写操作函数
+} device_t;
+
+#define N_DEVICE 16     // device_table中device的数量
+

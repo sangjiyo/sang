@@ -92,3 +92,26 @@ void arg_str(int n, char *buf, int maxlen)
 
     uvm_copyin_str(p->pgtbl, (uint64)buf, addr, maxlen);
 }
+
+// 返回 n 号参数对应的文件
+int arg_fd(int n, uint32 *pfd, file_t **pfile)
+{
+    uint32 fd;
+    file_t *file;
+    arg_uint32(n, &fd);
+
+    // 越界fd
+    if (fd >= N_OPEN_FILE_PER_PROC)
+        return -1;
+    
+    file = myproc()->open_file[fd];
+    
+    // 无效fd
+    if (file == NULL)
+        return -1;
+
+    if (pfd) *pfd = fd;
+    if (pfile) *pfile = file;
+
+    return 0;
+}

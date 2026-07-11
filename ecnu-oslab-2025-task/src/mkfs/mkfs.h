@@ -102,3 +102,7 @@ typedef struct dentry {
 #define INODE_PER_BLOCK   (BLOCK_SIZE / sizeof(inode_disk_t))
 #define DENTRY_PER_BLOCK  (BLOCK_SIZE / sizeof(dentry_t))
 #define COUNT_BLOCKS(ele_num, ele_per_block)  (((ele_num) + (ele_per_block) - 1) / (ele_per_block)) 
+
+// 输入参数限制
+#define ELF_MAXARGS          32
+#define ELF_MAXARG_LEN       (4096 / ELF_MAXARGS)

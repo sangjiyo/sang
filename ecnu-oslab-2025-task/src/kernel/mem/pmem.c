@@ -106,3 +106,9 @@ void pmem_free(uint64 page, bool in_kernel)
 
 
 }
+
+// 获取可用内存信息
+void pmem_stat(uint32 *free_pages_in_kernel, uint32 *free_pages_in_user)
+{
+
+}

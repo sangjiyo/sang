@@ -39,6 +39,7 @@
 #define ALIGN_UP(addr, refer) (((addr) + (refer) - 1) & ~((refer) - 1)) // 向上对齐
 #define ALIGN_DOWN(addr, refer) ((addr) & ~((refer) - 1))               // 向下对齐
 
+// CPU
 typedef struct cpu
 {
     int noff;       // 关中断的深度
@@ -46,3 +47,16 @@ typedef struct cpu
     proc_t *proc;   // cpu上运行的进程
     context_t ctx;  // 内核自身上下文
 } cpu_t;
+
+
+#define CONSOLE_INPUT_BUF 128
+
+// console
+typedef struct console
+{
+    spinlock_t lk;
+    char buf[CONSOLE_INPUT_BUF];
+    int read_idx;
+    int writ_idx;
+    int edit_idx;
+} console_t;

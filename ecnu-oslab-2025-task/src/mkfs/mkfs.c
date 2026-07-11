@@ -170,13 +170,46 @@ void inode_append(inode_disk_t *ip, void *data, unsigned int len)
     ip->size += tar_len;
 }
 
+/* /aaaa/bbb/ccc.elf -> ccc */
+void get_name_from_path(char *path, char *name)
+{
+    // 1. 找到最后一个 '/' 之后的部分（basename）
+    char *basename = path;
+    char *p = strrchr(path, '/');
+    if (p != NULL) {
+        basename = p + 1;
+    }
+
+    // 处理路径为 "/" 或 "//" 等情况
+    if (*basename == '\0')
+        *name = '\0';
+
+    // 2. 找到 basename 中第一个 '.'
+    char *dot = strchr(basename, '.');
+    int len;
+    if (dot != NULL) {
+        len = dot - basename;
+        memcpy(name, basename, len);
+    } else {
+        len = strlen(basename);
+        memcpy(name, basename, len);
+    }
+    name[len] = '\0';
+}
+
 int main(int argc, char* argv[])
 {
     assert(BLOCK_SIZE % sizeof(inode_disk_t) == 0);
 
-    inode_disk_t inode[3];
-    unsigned int inode_num[3];
-    dentry_t dentry[4];
+    unsigned int inode_num[ELF_MAXARGS];
+    inode_disk_t inode[ELF_MAXARGS];
+    dentry_t dentry[ELF_MAXARGS];
+    
+    char name[MAXLEN_FILENAME];
+    char buf[BLOCK_SIZE];
+    unsigned int read_len, total_len;
+    int fd;
+
 
 	/* step-1: 填充 superblock 结构体 */
 	sb.magic_num = FS_MAGIC;
@@ -220,28 +253,46 @@ int main(int argc, char* argv[])
     strcpy(dentry[1].name, "..");
     inode_append(&inode[0], dentry, sizeof(dentry_t) * 2);
 
-    /* step-5: 在根目录下创建两个文件 */
-    inode_num[1] = inode_alloc();
-    inode_num[2] = inode_alloc();
-    inode_init(&inode[1], INODE_TYPE_DATA, INODE_MAJOR_DEFAULT, INODE_MINOR_DEFAULT);
-    inode_init(&inode[2], INODE_TYPE_DATA, INODE_MAJOR_DEFAULT, INODE_MINOR_DEFAULT);
+    /* step-5: 在根目录下载入可执文件 */
+    for (int i = 2; i < argc; i++)
+    {
+        // 获取文件名
+        get_name_from_path(argv[i], name);
 
-    dentry[2].inode_num = xint(inode_num[1]);
-    dentry[3].inode_num = xint(inode_num[2]);
-    strcpy(dentry[2].name, "ABCD.txt");
-    strcpy(dentry[3].name, "abcd.txt");
-    inode_append(&inode[0], dentry + 2, sizeof(dentry_t) * 2);
+        // 申请inode + 初始化inode + 准备dentry
+        inode_num[i] = inode_alloc();
+        inode_init(&inode[i], INODE_TYPE_DATA, INODE_MAJOR_DEFAULT, INODE_MINOR_DEFAULT);
+        dentry[i].inode_num = xint(inode_num[i]);
+        strcpy(dentry[i].name, name);
+    }
+    inode_append(&inode[0], dentry + 2, sizeof(dentry_t) * (argc - 2));
 
     /* step-6: 填充文件内容 */
-    char tmp[26];
-    for (int i = 0; i < 26; i++)
-        tmp[i] = 'A' + i;
-    for (int i = 0; i < 200; i++)
-        inode_append(&inode[1], tmp, sizeof(tmp));
-    for (int i = 0; i < 26; i++)
-        tmp[i] = 'a' + i;
-    for (int i = 0; i < 500; i++)
-        inode_append(&inode[2], tmp, sizeof(tmp));
+    for (int i = 2; i < argc; i++)
+    {
+        fd = open(argv[i], O_RDONLY);
+        if (fd < 0) {
+            perror(argv[i]);
+            exit(1);
+        }
+
+        total_len = 0;
+        while (1)
+        {
+            read_len = read(fd, buf, BLOCK_SIZE);
+            if (read_len == -1) {
+                perror("read fail!\n");
+                exit(1);
+            }
+
+            total_len += read_len;
+            inode_append(&inode[i], buf, read_len);
+            if (read_len < BLOCK_SIZE)
+                break;
+        }
+        
+        close(fd);
+    }
 
     /* step-7: 写回super block和inode */
     sb.magic_num = xint(sb.magic_num);
@@ -259,7 +310,8 @@ int main(int argc, char* argv[])
     memcpy(data_buf, &sb, sizeof(sb));
     block_rw(0, data_buf, true);
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < argc; i++) {
+        if (i == 1) continue; // 这个inode被跳过
         inode[i].type = xshort(inode[i].type);
         inode[i].major = xshort(inode[i].major);
         inode[i].minor = xshort(inode[i].minor);
