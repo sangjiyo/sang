@@ -10,11 +10,11 @@ void uvm_copyin(pgtbl_t pgtbl, uint64 dst, uint64 src, uint32 len)
     while (len > 0) {
         va0 = ALIGN_DOWN(src, PGSIZE);
         pte_t* pte = vm_getpte(pgtbl, va0, 0);
-        if(pte == NULL || !(*pte & PTE_V))
+        if (pte == NULL || !(*pte & PTE_V))
             panic("uvm_copyin: page fault");
         pa0 = PTE_TO_PA(*pte);
         n = PGSIZE - (src - va0);
-        if (n > len) 
+        if (n > len)
             n = len;
         memmove((void*)dst, (void*)(pa0 + (src - va0)), n);
         len -= n;
@@ -92,9 +92,9 @@ void uvm_copyin_str(pgtbl_t pgtbl, uint64 dst, uint64 src, uint32 maxlen)
 
 // 打印以mmap为首的mmap链
 // for debug
-void uvm_show_mmaplist(mmap_region_t *mmap)
+void uvm_show_mmaplist(mmap_region_t* mmap)
 {
-    mmap_region_t *tmp = mmap;
+    mmap_region_t* tmp = mmap;
     printf("\nalloced mmap_space:\n");
     if (tmp == NULL)
         printf("empty\n");
@@ -108,7 +108,7 @@ void uvm_show_mmaplist(mmap_region_t *mmap)
 // 两个 mmap_region 区域合并
 // 注意: 保留一个 释放一个 不操作 next 指针
 // 由uvm_mmap调用
-static void mmap_merge(mmap_region_t *mmap_1, mmap_region_t *mmap_2, bool keep_mmap_1)
+static void mmap_merge(mmap_region_t* mmap_1, mmap_region_t* mmap_2, bool keep_mmap_1)
 {
     // 确保有效和紧临
     assert(mmap_1 != NULL && mmap_2 != NULL, "mmap_merge: NULL");
@@ -118,7 +118,8 @@ static void mmap_merge(mmap_region_t *mmap_1, mmap_region_t *mmap_2, bool keep_m
     if (keep_mmap_1) {
         mmap_1->npages += mmap_2->npages;
         mmap_region_free(mmap_2);
-    } else {
+    }
+    else {
         mmap_2->begin -= mmap_1->npages * PGSIZE;
         mmap_2->npages += mmap_1->npages;
         mmap_region_free(mmap_1);
@@ -128,7 +129,7 @@ static void mmap_merge(mmap_region_t *mmap_1, mmap_region_t *mmap_2, bool keep_m
 // 寻找一块足够大的区域(len), 作为 mmap_region
 // 由uvm_mmap调用(处理begin==0的情况)
 // 成功返回begin, 失败返回0
-static uint64 uvm_mmap_find(mmap_region_t *head_mmap, uint64 len, mmap_region_t **p_last_mmap, mmap_region_t **p_tmp_mmap)
+static uint64 uvm_mmap_find(mmap_region_t* head_mmap, uint64 len, mmap_region_t** p_last_mmap, mmap_region_t** p_tmp_mmap)
 {
     // 遍历链表，寻找空闲空洞
     uint64 candidate = MMAP_BEGIN;
@@ -317,7 +318,8 @@ void uvm_munmap(uint64 begin, uint32 npages)
 /*------------------part-3: 用户空间heap和stack管理相关------------------*/
 
 // 用户堆空间增加, 返回新的堆顶地址 (注意栈顶最大值限制)
-uint64 uvm_heap_grow(pgtbl_t pgtbl, uint64 cur_heap_top, uint32 len) 
+// flag: 页面权限标志 (如PTE_R|PTE_W|PTE_U 或 PTE_R|PTE_X|PTE_U)
+uint64 uvm_heap_grow(pgtbl_t pgtbl, uint64 cur_heap_top, uint32 len, int flag)
 {
     uint64 new_top = cur_heap_top + len;
     if (new_top > MMAP_BEGIN)
@@ -326,7 +328,7 @@ uint64 uvm_heap_grow(pgtbl_t pgtbl, uint64 cur_heap_top, uint32 len)
     uint64 end = ALIGN_UP(new_top, PGSIZE);
     for (uint64 va = start; va < end; va += PGSIZE) {
         uint64 pa = (uint64)pmem_alloc(false);
-        vm_mappages(pgtbl, va, pa, PGSIZE, PTE_R | PTE_W | PTE_U);
+        vm_mappages(pgtbl, va, pa, PGSIZE, flag | PTE_U);
     }
     return new_top;
 }
@@ -367,7 +369,7 @@ uint64 uvm_ustack_grow(pgtbl_t pgtbl, uint64 old_ustack_npage, uint64 fault_addr
         panic("uvm_ustack_grow: not enough space for stack");
     // 确保至少扩展 4 页，避免后续多次缺页
     if (need_pages < 4) need_pages = 4;
-    
+
     // 新栈低地址，必须 ≥ MMAP_END
     uint64 new_npage = old_ustack_npage + need_pages;
     uint64 new_low = ustack_va - (new_npage - 1) * PGSIZE;
@@ -425,7 +427,7 @@ static void copy_range(pgtbl_t old, pgtbl_t new, uint64 begin, uint64 end)
 {
     uint64 va, pa, page;
     int flags;
-    pte_t *pte;
+    pte_t* pte;
 
     for (va = begin; va < end; va += PGSIZE)
     {
@@ -437,14 +439,14 @@ static void copy_range(pgtbl_t old, pgtbl_t new, uint64 begin, uint64 end)
         flags = (int)PTE_FLAGS(*pte);
 
         page = (uint64)pmem_alloc(false);
-        memmove((char *)page, (const char *)pa, PGSIZE);
+        memmove((char*)page, (const char*)pa, PGSIZE);
         vm_mappages(new, va, page, PGSIZE, flags);
     }
 }
 
 // 拷贝页表 (拷贝并不包括 trapframe 和 trampoline)
 // 拷贝的页表管理的物理页是原来页表的复制品
-void uvm_copy_pgtbl(pgtbl_t old, pgtbl_t new, uint64 heap_top, uint64 ustack_npage, mmap_region_t *mmap)
+void uvm_copy_pgtbl(pgtbl_t old, pgtbl_t new, uint64 heap_top, uint64 ustack_npage, mmap_region_t* mmap)
 {
     // 1. 拷贝代码段 (USER_BASE ~ USER_BASE + PGSIZE)
     copy_range(old, new, USER_BASE, USER_BASE + PGSIZE);

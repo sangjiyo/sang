@@ -1,9 +1,9 @@
-#include "sys.h"
+﻿#include "sys.h"
 
 int main()
 {
-	char path[] = "./test_1";
-	char arg0[] = "test_1";
+	char path[] = "./test_4";
+	char arg0[] = "test_4";
 	char arg1[] = "111";
 	char arg2[] = "222";
 	char arg3[] = "333";

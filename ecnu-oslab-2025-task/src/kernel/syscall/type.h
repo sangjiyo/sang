@@ -26,7 +26,7 @@
 #define SYS_link 21             // 建立硬链接
 #define SYS_unlink 22           // 解除硬链接
 
-#define SYS_MAX_NUM 21
+#define SYS_MAX_NUM 22
 
 /* 可以传入的最大字符串长度 */
 #define STR_MAXLEN 127

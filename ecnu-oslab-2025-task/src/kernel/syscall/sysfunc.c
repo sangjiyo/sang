@@ -1,4 +1,4 @@
-#include "mod.h"
+﻿#include "mod.h"
 
 /*
     用户堆空间伸缩
@@ -26,7 +26,7 @@ uint64 sys_brk()
     // 增长
     if (new_heap_top > old_heap_top) {
         uint32 inc = new_heap_top - old_heap_top;
-        uint64 ret = uvm_heap_grow(p->pgtbl, old_heap_top, inc);
+        uint64 ret = uvm_heap_grow(p->pgtbl, old_heap_top, inc, PTE_R | PTE_W);
         p->heap_top = ret;
         return ret;
     }
@@ -91,35 +91,6 @@ uint64 sys_munmap()
     return 0;
 }
 
-// 打印一个字符串
-// char *str
-// 成功返回0
-uint64 sys_print_str()
-{
-    uint64 addr;
-    arg_uint64(0, &addr);
-
-    // 从用户空间读取字符串到内核缓冲区
-    char buf[STR_MAXLEN + 1];
-    proc_t *p = myproc();
-    uvm_copyin_str(p->pgtbl, (uint64)buf, addr, STR_MAXLEN);
-
-    // 打印字符串
-    printf("%s", buf);
-    return 0;
-}
-
-// 打印一个32位整数
-// int num
-// 成功返回0
-uint64 sys_print_int()
-{
-    uint32 num;
-    arg_uint32(0, &num);
-    printf("num = %d\n", (int)num);
-    return 0;
-}
-
 // 进程复制
 // 返回子进程的pid
 uint64 sys_fork()
@@ -166,157 +137,6 @@ uint64 sys_getpid()
 }
 
 /*
-    从data_bitmap申请1个block (测试data_bitmap_alloc)
-    返回block序号
-*/
-uint64 sys_alloc_block()
-{
-    return bitmap_alloc_block();
-}
-
-/*
-    向data_bitmap释放1个block (测试data_bitmap_free)
-    uint32 block_num (目标block序号)
-    成功返回0
-*/
-uint64 sys_free_block()
-{
-    uint32 block_num;
-    arg_uint32(0, &block_num);
-    bitmap_free_block(block_num);
-    return 0;
-}
-
-/*
-    从inode_bitmap申请1个inode (测试inode_bitmap_alloc)
-    返回inode序号
-*/
-uint64 sys_alloc_inode()
-{
-    return bitmap_alloc_inode();
-}
-
-/*
-    向inode_bitmap释放1个inode (测试inode_bitmap_free)
-    uint32 inode_num (目标inode序号)
-    成功返回0
-*/
-uint64 sys_free_inode()
-{
-    uint32 inode_num;
-    arg_uint32(0, &inode_num);
-    bitmap_free_inode(inode_num);
-    return 0;
-}
-
-/*
-    输出目标bitmap的状态
-    uint32 choose_bitmap (0->data_bitmap 1->inode_bitmap)
-    成功返回0, 失败返回-1
-*/
-uint64 sys_show_bitmap()
-{
-    uint32 choose;
-    arg_uint32(0, &choose);
-    if (choose > 1)
-        return -1;
-    bitmap_print(choose == 0 ? true : false);
-    return 0;
-}
-
-/*
-    获取1个描述block的buffer (测试buffer_get)
-    uint32 block_num 目标block的序号
-    成功返回buffer地址, 失败返回-1
-*/
-uint64 sys_get_block()
-{
-    uint32 block_num;
-    arg_uint32(0, &block_num);
-    buffer_t *buf = buffer_get(block_num);
-    return (uint64)buf;
-}
-
-/*
-    释放1个描述block的buffer (测试buffer_put)
-    uint64 addr_buf 即将被释放的buffer
-    成功返回0
-*/
-uint64 sys_put_block()
-{
-    uint64 addr_buf;
-    arg_uint64(0, &addr_buf);
-    buffer_put((buffer_t*)addr_buf);
-    return 0;
-}
-
-/*
-    将buf->data拷贝到用户空间 (测试buffer_read)
-    uint64 addr_buf 使用的buffer
-    uint64 addr_data 用户数据区 (copy dst)
-    成功返回0
-*/
-uint64 sys_read_block()
-{
-    uint64 addr_buf, addr_data;
-    arg_uint64(0, &addr_buf);
-    arg_uint64(1, &addr_data);
-
-    buffer_t *buf = (buffer_t*)addr_buf;
-    proc_t *p = myproc();
-
-    // 将buf->data拷贝到用户空间
-    uvm_copyout(p->pgtbl, addr_data, (uint64)buf->data, BLOCK_SIZE);
-    return 0;
-}
-
-/*
-    将用户空间数据同步到内核空间, 并通过buffer写入block (测试buffer_write)
-    uint64 addr_buf 使用的buffer
-    uint64 addr_data 用户数据区 (copy src)
-    成功返回0
-*/
-uint64 sys_write_block()
-{
-    uint64 addr_buf, addr_data;
-    arg_uint64(0, &addr_buf);
-    arg_uint64(1, &addr_data);
-
-    buffer_t *buf = (buffer_t*)addr_buf;
-    proc_t *p = myproc();
-
-    // 将用户空间数据拷贝到buf->data
-    uvm_copyin(p->pgtbl, (uint64)buf->data, addr_data, BLOCK_SIZE);
-
-    // 写入磁盘
-    buffer_write(buf);
-    return 0;
-}
-
-/*
-    输出buffer链表的状态
-    成功返回0
-*/
-uint64 sys_show_buffer()
-{
-    buffer_print_info();
-    return 0;
-}
-
-/*
-    释放非活跃链表中buffer持有的物理内存资源
-    uint32 buffer_count (希望释放的buffer数量)
-    成功返回0
-*/
-uint64 sys_flush_buffer()
-{
-    uint32 buffer_count;
-    arg_uint32(0, &buffer_count);
-    buffer_freemem(buffer_count);
-    return 0;
-}
-
-/*
     执行ELF文件以替换当前进程的内容
     char *path
     char **argv
@@ -324,7 +144,32 @@ uint64 sys_flush_buffer()
 */
 uint64 sys_exec()
 {
+    uint64 path_addr, argv_addr;
+    arg_uint64(0, &path_addr);
+    arg_uint64(1, &argv_addr);
 
+    char path[STR_MAXLEN + 1];
+    uvm_copyin_str(myproc()->pgtbl, (uint64)path, path_addr, STR_MAXLEN);
+
+    // 逐个读入argv指针, 避免一次读256字节跨页踩到未映射内存
+    char* argv[ELF_MAXARGS + 1];
+    proc_t* p = myproc();
+    int argc;
+    for (argc = 0; argc < ELF_MAXARGS; argc++) {
+        uint64 uptr;
+        uvm_copyin(p->pgtbl, (uint64)&uptr, argv_addr + argc * sizeof(uint64), sizeof(uint64));
+        if (uptr == 0) break;
+        argv[argc] = (char*)pmem_alloc(true);
+        uvm_copyin_str(p->pgtbl, (uint64)argv[argc], uptr, ELF_MAXARG_LEN);
+    }
+    argv[argc] = NULL;
+
+    int ret = proc_exec(path, argv);
+
+    for (int i = 0; i < argc; i++)
+        pmem_free((uint64)argv[i], true);
+
+    return ret;
 }
 
 /* 构建fd->file的映射, 返回fd */
@@ -349,7 +194,19 @@ static uint32 alloc_fd(file_t *file)
 */
 uint64 sys_open()
 {
+    uint64 path_addr;
+    uint32 open_mode;
+    arg_uint64(0, &path_addr);
+    arg_uint32(1, &open_mode);
 
+    char path[STR_MAXLEN + 1];
+    uvm_copyin_str(myproc()->pgtbl, (uint64)path, path_addr, STR_MAXLEN);
+
+    file_t *file = file_open(path, open_mode);
+    if (file == NULL)
+        return -1;
+
+    return alloc_fd(file);
 }
 
 /*
@@ -359,7 +216,14 @@ uint64 sys_open()
 */
 uint64 sys_close()
 {
+    uint32 fd;
+    file_t *file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
 
+    myproc()->open_file[fd] = NULL;
+    file_close(file);
+    return 0;
 }
 
 /*
@@ -371,7 +235,15 @@ uint64 sys_close()
 */
 uint64 sys_read()
 {
+    uint32 fd, len;
+    uint64 addr;
+    file_t *file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
+    arg_uint32(1, &len);
+    arg_uint64(2, &addr);
 
+    return file_read(file, len, addr, true);
 }
 
 /*
@@ -383,7 +255,15 @@ uint64 sys_read()
 */
 uint64 sys_write()
 {
+    uint32 fd, len;
+    uint64 addr;
+    file_t* file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
+    arg_uint32(1, &len);
+    arg_uint64(2, &addr);
 
+    return file_write(file, len, addr, true);
 }
 
 /*
@@ -395,7 +275,14 @@ uint64 sys_write()
 */
 uint64 sys_lseek()
 {
+    uint32 fd, offset, flag;
+    file_t *file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
+    arg_uint32(1, &offset);
+    arg_uint32(2, &flag);
 
+    return file_lseek(file, offset, flag);
 }
 
 /*
@@ -405,7 +292,13 @@ uint64 sys_lseek()
 */
 uint64 sys_dup()
 {
+    uint32 fd;
+    file_t *file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
 
+    file_dup(file);
+    return alloc_fd(file);
 }
 
 /*
@@ -416,7 +309,14 @@ uint64 sys_dup()
 */
 uint64 sys_fstat()
 {
+    uint32 fd;
+    uint64 addr;
+    file_t *file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
+    arg_uint64(1, &addr);
 
+    return file_get_stat(file, addr);
 }
 
 /*
@@ -428,7 +328,15 @@ uint64 sys_fstat()
 */
 uint64 sys_get_dentries()
 {
+    uint32 fd, len;
+    uint64 addr;
+    file_t *file;
+    if (arg_fd(0, &fd, &file) < 0)
+        return -1;
+    arg_uint64(1, &addr);
+    arg_uint32(2, &len);
 
+    return file_read(file, len, addr, true);
 }
 
 /*
@@ -438,7 +346,19 @@ uint64 sys_get_dentries()
 */
 uint64 sys_mkdir()
 {
+    uint64 path_addr;
+    arg_uint64(0, &path_addr);
 
+    char path[STR_MAXLEN + 1];
+    uvm_copyin_str(myproc()->pgtbl, (uint64)path, path_addr, STR_MAXLEN);
+
+    inode_t *ip = path_create_inode(path, INODE_TYPE_DIR,
+                                     INODE_MAJOR_DEFAULT, INODE_MINOR_DEFAULT);
+    if (ip == NULL)
+        return -1;
+
+    inode_put(ip);
+    return 0;
 }
 
 /*
@@ -448,7 +368,29 @@ uint64 sys_mkdir()
 */
 uint64 sys_chdir()
 {
+    uint64 path_addr;
+    arg_uint64(0, &path_addr);
 
+    char path[STR_MAXLEN + 1];
+    uvm_copyin_str(myproc()->pgtbl, (uint64)path, path_addr, STR_MAXLEN);
+
+    inode_t *ip = path_to_inode(path);
+    if (ip == NULL)
+        return -1;
+
+    inode_lock(ip);
+    if (ip->disk_info.type != INODE_TYPE_DIR) {
+        inode_unlock(ip);
+        inode_put(ip);
+        return -1;
+    }
+    inode_unlock(ip);
+
+    proc_t *p = myproc();
+    if (p->cwd != NULL)
+        inode_put(p->cwd);
+    p->cwd = ip;
+    return 0;
 }
 
 /*
@@ -457,7 +399,19 @@ uint64 sys_chdir()
 */
 uint64 sys_print_cwd()
 {
+    char path[STR_MAXLEN + 1];
+    proc_t *p = myproc();
 
+    if (p->cwd == NULL)
+        return -1;
+
+    uint32 offset = inode_to_path(p->cwd, path, STR_MAXLEN);
+
+    if (offset == (uint32)-1)
+        return -1;
+
+    printf("current work directory = %s\n", path + offset);
+    return 0;
 }
 
 /*
@@ -468,7 +422,16 @@ uint64 sys_print_cwd()
 */
 uint64 sys_link()
 {
+    uint64 old_addr, new_addr;
+    arg_uint64(0, &old_addr);
+    arg_uint64(1, &new_addr);
 
+    char old_path[STR_MAXLEN + 1], new_path[STR_MAXLEN + 1];
+    proc_t *p = myproc();
+    uvm_copyin_str(p->pgtbl, (uint64)old_path, old_addr, STR_MAXLEN);
+    uvm_copyin_str(p->pgtbl, (uint64)new_path, new_addr, STR_MAXLEN);
+
+    return path_link(old_path, new_path);
 }
 
 
@@ -479,5 +442,11 @@ uint64 sys_link()
 */
 uint64 sys_unlink()
 {
+    uint64 path_addr;
+    arg_uint64(0, &path_addr);
 
+    char path[STR_MAXLEN + 1];
+    uvm_copyin_str(myproc()->pgtbl, (uint64)path, path_addr, STR_MAXLEN);
+
+    return path_unlink(path);
 }

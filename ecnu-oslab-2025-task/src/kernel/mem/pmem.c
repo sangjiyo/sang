@@ -47,6 +47,10 @@ void pmem_init(void)
         node->next = user_region.list_head.next;
         user_region.list_head.next = node;
     }
+
+    printf("=== pmem_init DONE: kern=%d pages [%x-%x] user=%d pages [%x-%x] ===\n",
+        kern_region.allocable, kern_region.begin, kern_region.end,
+        user_region.allocable, user_region.begin, user_region.end);
 }
 
 // 尝试返回一个可分配的清零后的物理页
@@ -55,7 +59,7 @@ void* pmem_alloc(bool in_kernel)
 {
 
     alloc_region_t* region = in_kernel ? &kern_region : &user_region;
-    page_node_t *page;
+    page_node_t* page;
 
     spinlock_acquire(&region->lk);
 
@@ -72,9 +76,8 @@ void* pmem_alloc(bool in_kernel)
 
     spinlock_release(&region->lk);
 
-    // 清零该页（因为分配出去后可能存放敏感数据）
+    // 清零该页
     memset(page, 0, PGSIZE);
-
 
     return page;
 }
@@ -108,7 +111,13 @@ void pmem_free(uint64 page, bool in_kernel)
 }
 
 // 获取可用内存信息
-void pmem_stat(uint32 *free_pages_in_kernel, uint32 *free_pages_in_user)
+void pmem_stat(uint32* free_pages_in_kernel, uint32* free_pages_in_user)
 {
+    spinlock_acquire(&kern_region.lk);
+    *free_pages_in_kernel = kern_region.allocable;
+    spinlock_release(&kern_region.lk);
 
+    spinlock_acquire(&user_region.lk);
+    *free_pages_in_user = user_region.allocable;
+    spinlock_release(&user_region.lk);
 }

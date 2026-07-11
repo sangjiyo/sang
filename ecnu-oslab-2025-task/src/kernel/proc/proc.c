@@ -51,6 +51,13 @@ static void proc_return()
         if (!fs_inited) {
             fs_inited = true;
             fs_init();
+
+            // proczero: 打开标准输入/输出/错误, 设置工作目录
+            p->open_file[0] = file_open("/dev/stdin", FILE_OPEN_READ);
+            p->open_file[1] = file_open("/dev/stdout", FILE_OPEN_WRITE);
+            p->open_file[2] = file_open("/dev/stderr", FILE_OPEN_WRITE);
+
+            p->cwd = inode_get(ROOT_INODE);
         }
     }
 
@@ -80,6 +87,9 @@ void proc_init()
         p->ustack_npage = 0;
         p->mmap = NULL;
         p->tf = NULL;
+        p->cwd = NULL;
+        for (int j = 0; j < N_OPEN_FILE_PER_PROC; j++)
+            p->open_file[j] = NULL;
         // kstack 在 kvm_init 中已经映射, 这里设置虚拟地址
         p->kstack = KSTACK(i);
         memset(&p->ctx, 0, sizeof(p->ctx));
@@ -147,6 +157,9 @@ found:
     p->parent = NULL;
     p->exit_code = 0;
     p->sleep_space = NULL;
+    p->cwd = NULL;
+    for (int j = 0; j < N_OPEN_FILE_PER_PROC; j++)
+        p->open_file[j] = NULL;
 
     return p;
 }
@@ -179,6 +192,16 @@ void proc_free(proc_t* p)
     p->heap_top = 0;
     p->ustack_npage = 0;
     p->mmap = NULL;
+    if (p->cwd != NULL) {
+        inode_put(p->cwd);
+        p->cwd = NULL;
+    }
+    for (int j = 0; j < N_OPEN_FILE_PER_PROC; j++) {
+        if (p->open_file[j] != NULL) {
+            file_close(p->open_file[j]);
+            p->open_file[j] = NULL;
+        }
+    }
 }
 
 // 获得一个初始化过的用户页表
@@ -298,6 +321,18 @@ int proc_fork()
     // 复制进程名称
     memmove(np->name, p->name, sizeof(p->name));
 
+    // 复制父进程的工作目录
+    if (p->cwd != NULL) {
+        np->cwd = inode_dup(p->cwd);
+    }
+
+    // 复制父进程的打开文件表
+    for (int j = 0; j < N_OPEN_FILE_PER_PROC; j++) {
+        if (p->open_file[j] != NULL) {
+            np->open_file[j] = file_dup(p->open_file[j]);
+        }
+    }
+
     // 设置状态为RUNNABLE
     np->state = RUNNABLE;
 
@@ -351,8 +386,6 @@ static void proc_try_wakeup(proc_t* p)
     // 如果p正在睡眠且等待的资源是它自己 (即p在proc_wait中睡眠)
     if (p->state == SLEEPING && p->sleep_space == p) {
         p->state = RUNNABLE;
-        // 提示性输出: 进程被唤醒
-        printf("proc %d is wakeup!\n", p->pid);
     }
 }
 
@@ -502,8 +535,6 @@ void proc_wakeup(void* sleep_space)
         spinlock_acquire(&p->lk);
         if (p->state == SLEEPING && p->sleep_space == sleep_space) {
             p->state = RUNNABLE;
-            // 提示性输出: 进程被唤醒
-            //printf("proc %d is wakeup!\n", p->pid);
         }
         spinlock_release(&p->lk);
     }

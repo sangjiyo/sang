@@ -108,6 +108,16 @@ void trap_user_handler()
         default:
             printf("\nunexpected exception from user: %s\n", exception_info[trap_id]);
             printf("trap_id = %d, sepc = %x, stval = %x\n", trap_id, sepc, stval);
+            // 检查代码页(0x1000)和mmap页是否共享PA
+            {
+                pte_t* dp1 = vm_getpte(p->pgtbl, 0x1000, false);
+                pte_t* dp2 = vm_getpte(p->pgtbl, MMAP_BEGIN, false);
+                if (dp1 && dp2 && (*dp1 & PTE_V) && (*dp2 & PTE_V)) {
+                    printf("code_pa=%x mmap_pa=%x %s\n",
+                        PTE_TO_PA(*dp1), PTE_TO_PA(*dp2),
+                        PTE_TO_PA(*dp1) == PTE_TO_PA(*dp2) ? "SAME!" : "diff");
+                }
+            }
             panic("trap_user_handler: exception");
         }
     }

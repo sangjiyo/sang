@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +42,7 @@ unsigned int xint(unsigned int x)
 /*-------------------------磁盘区域读写能力-------------------------*/
 
 /* 读取/写回1个block */
-void block_rw(unsigned int block_num, void *buf, bool write_it)
+void block_rw(unsigned int block_num, void* buf, bool write_it)
 {
     if (lseek(disk_fd, BLOCK_SIZE * block_num, 0) != BLOCK_SIZE * block_num) {
         perror("lseek");
@@ -54,7 +54,8 @@ void block_rw(unsigned int block_num, void *buf, bool write_it)
             perror("write");
             exit(1);
         }
-    } else {
+    }
+    else {
         if (read(disk_fd, buf, BLOCK_SIZE) != BLOCK_SIZE) {
             perror("read");
             exit(1);
@@ -63,16 +64,17 @@ void block_rw(unsigned int block_num, void *buf, bool write_it)
 }
 
 /* 读取/写回1个inode */
-void inode_rw(unsigned int inode_num, inode_disk_t *ip, bool write_it)
+void inode_rw(unsigned int inode_num, inode_disk_t* ip, bool write_it)
 {
     unsigned int block_num = sb.inode_firstblock + inode_num / INODE_PER_BLOCK;
     unsigned int byte_offset = (inode_num % INODE_PER_BLOCK) * sizeof(inode_disk_t);
-    
+
     if (write_it) {
         block_rw(block_num, inode_buf, false);
         memcpy(inode_buf + byte_offset, ip, sizeof(inode_disk_t));
         block_rw(block_num, inode_buf, true);
-    } else {
+    }
+    else {
         block_rw(block_num, inode_buf, false);
         memcpy(ip, inode_buf + byte_offset, sizeof(inode_disk_t));
     }
@@ -82,7 +84,7 @@ void inode_rw(unsigned int inode_num, inode_disk_t *ip, bool write_it)
 unsigned int block_alloc()
 {
     unsigned int block_num, byte_offset, bit_offset;
-    
+
     block_num = sb.data_bitmap_firstblock + global_block_num / BIT_PER_BLOCK;
     bit_offset = global_block_num % BIT_PER_BLOCK;
     byte_offset = bit_offset / BIT_PER_BYTE;
@@ -99,7 +101,7 @@ unsigned int block_alloc()
 unsigned int inode_alloc()
 {
     unsigned int block_num, byte_offset, bit_offset;
-    
+
     block_num = sb.inode_bitmap_firstblock + global_inode_num / BIT_PER_BLOCK;
     bit_offset = global_inode_num % BIT_PER_BLOCK;
     byte_offset = bit_offset / BIT_PER_BYTE;
@@ -115,7 +117,7 @@ unsigned int inode_alloc()
 /*-------------------------inode精细化管理-------------------------*/
 
 /* inode初始化 */
-void inode_init(inode_disk_t *ip, short type, short major, short minor)
+void inode_init(inode_disk_t* ip, short type, short major, short minor)
 {
     ip->type = type;
     ip->major = major;
@@ -127,25 +129,31 @@ void inode_init(inode_disk_t *ip, short type, short major, short minor)
 }
 
 /* 对inode管理的数据做追加写 */
-void inode_append(inode_disk_t *ip, void *data, unsigned int len)
+void inode_append(inode_disk_t* ip, void* data, unsigned int len)
 {
     unsigned int old_blocks, new_blocks;
-    unsigned int cut_len, tar_len; 
+    unsigned int cut_len, tar_len;
     unsigned int tmp, offset;
-    char *data_new = (char*)data; 
-    
+    char* data_new = (char*)data;
+
     old_blocks = COUNT_BLOCKS(ip->size, BLOCK_SIZE);
     new_blocks = COUNT_BLOCKS(ip->size + len, BLOCK_SIZE);
     tmp = ip->size / BLOCK_SIZE;
     tar_len = len;
 
     /* 如果有必要, 扩充block空间 */
+    if (new_blocks > INODE_BLOCK_INDEX_1) { // 出于简化考虑, 暂不启用间接映射
+        printf("inode_append: data len out of space!\n");
+        return;
+    }
+    // 确保所有需要写入的block都已分配 (tmp = ip->size/BLOCK_SIZE)
+    // 修复:COUNT_BLOCKS不增长时(tmp>=new_blocks)仍可能未分配
+    for (int i = 0; i <= tmp; i++) {
+        if (ip->index[i] == 0)
+            ip->index[i] = block_alloc();
+    }
     if (new_blocks > old_blocks) {
-        if (new_blocks > INODE_BLOCK_INDEX_1) { // 出于简化考虑, 暂不启用间接映射
-            printf("inode_append: data len out of space!\n");
-            return;
-        }
-        for(int i = old_blocks; i < new_blocks; i++)
+        for (int i = old_blocks; i < new_blocks; i++)
             ip->index[i] = block_alloc();
     }
 
@@ -157,7 +165,8 @@ void inode_append(inode_disk_t *ip, void *data, unsigned int len)
             offset = ip->size % BLOCK_SIZE;
             block_rw(ip->index[tmp], data_buf, false);
             memcpy(data_buf + offset, data_new, cut_len);
-        } else { /* new block */
+        }
+        else { /* new block */
             cut_len = MIN(BLOCK_SIZE, len);
             memcpy(data_buf, data_new, cut_len);
         }
@@ -171,11 +180,11 @@ void inode_append(inode_disk_t *ip, void *data, unsigned int len)
 }
 
 /* /aaaa/bbb/ccc.elf -> ccc */
-void get_name_from_path(char *path, char *name)
+void get_name_from_path(char* path, char* name)
 {
     // 1. 找到最后一个 '/' 之后的部分（basename）
-    char *basename = path;
-    char *p = strrchr(path, '/');
+    char* basename = path;
+    char* p = strrchr(path, '/');
     if (p != NULL) {
         basename = p + 1;
     }
@@ -185,12 +194,13 @@ void get_name_from_path(char *path, char *name)
         *name = '\0';
 
     // 2. 找到 basename 中第一个 '.'
-    char *dot = strchr(basename, '.');
+    char* dot = strchr(basename, '.');
     int len;
     if (dot != NULL) {
         len = dot - basename;
         memcpy(name, basename, len);
-    } else {
+    }
+    else {
         len = strlen(basename);
         memcpy(name, basename, len);
     }
@@ -204,31 +214,31 @@ int main(int argc, char* argv[])
     unsigned int inode_num[ELF_MAXARGS];
     inode_disk_t inode[ELF_MAXARGS];
     dentry_t dentry[ELF_MAXARGS];
-    
+
     char name[MAXLEN_FILENAME];
     char buf[BLOCK_SIZE];
     unsigned int read_len, total_len;
     int fd;
 
 
-	/* step-1: 填充 superblock 结构体 */
-	sb.magic_num = FS_MAGIC;
-	sb.block_size = BLOCK_SIZE;
-	sb.inode_bitmap_firstblock = 1;
-	sb.inode_bitmap_blocks = COUNT_BLOCKS(N_INODE, BIT_PER_BLOCK);
-	sb.inode_firstblock = sb.inode_bitmap_firstblock + sb.inode_bitmap_blocks;
-	sb.inode_blocks = COUNT_BLOCKS(N_INODE, INODE_PER_BLOCK);
-	sb.data_bitmap_firstblock = sb.inode_firstblock + sb.inode_blocks;
-	sb.data_bitmap_blocks = COUNT_BLOCKS(N_DATA_BLOCK, BIT_PER_BLOCK);
-	sb.data_firstblock = sb.data_bitmap_firstblock + sb.data_bitmap_blocks;
-	sb.data_blocks = N_DATA_BLOCK;
+    /* step-1: 填充 superblock 结构体 */
+    sb.magic_num = FS_MAGIC;
+    sb.block_size = BLOCK_SIZE;
+    sb.inode_bitmap_firstblock = 1;
+    sb.inode_bitmap_blocks = COUNT_BLOCKS(N_INODE, BIT_PER_BLOCK);
+    sb.inode_firstblock = sb.inode_bitmap_firstblock + sb.inode_bitmap_blocks;
+    sb.inode_blocks = COUNT_BLOCKS(N_INODE, INODE_PER_BLOCK);
+    sb.data_bitmap_firstblock = sb.inode_firstblock + sb.inode_blocks;
+    sb.data_bitmap_blocks = COUNT_BLOCKS(N_DATA_BLOCK, BIT_PER_BLOCK);
+    sb.data_firstblock = sb.data_bitmap_firstblock + sb.data_bitmap_blocks;
+    sb.data_blocks = N_DATA_BLOCK;
     sb.total_inodes = N_INODE;
-	sb.total_blocks = 1 + sb.inode_bitmap_blocks + sb.inode_blocks
-			+ sb.data_bitmap_blocks + sb.data_blocks;
+    sb.total_blocks = 1 + sb.inode_bitmap_blocks + sb.inode_blocks
+        + sb.data_bitmap_blocks + sb.data_blocks;
 
     /* step-2: 创建磁盘文件 */
     disk_fd = open(argv[1], O_RDWR | O_CREAT | O_TRUNC, 0666);
-    if(disk_fd < 0) {
+    if (disk_fd < 0) {
         perror(argv[1]);
         exit(1);
     }
@@ -236,7 +246,7 @@ int main(int argc, char* argv[])
     /* step-3: 准备一个清零的磁盘映像 */
     memset(data_buf, 0, BLOCK_SIZE);
     printf("\nPreparing disk.img...\n\n");
-    for(int i = 0; i < sb.total_blocks; i++)
+    for (int i = 0; i < sb.total_blocks; i++)
         block_rw(i, data_buf, true);
 
     /* step-4: 制作根目录 */
@@ -290,7 +300,7 @@ int main(int argc, char* argv[])
             if (read_len < BLOCK_SIZE)
                 break;
         }
-        
+
         close(fd);
     }
 
@@ -317,7 +327,7 @@ int main(int argc, char* argv[])
         inode[i].minor = xshort(inode[i].minor);
         inode[i].nlink = xshort(inode[i].nlink);
         inode[i].size = xint(inode[i].size);
-        for(int j = 0; j < INODE_INDEX_3; j++)
+        for (int j = 0; j < INODE_INDEX_3; j++)
             inode[i].index[j] = xint(inode[i].index[j]);
         inode_rw(inode_num[i], &inode[i], true);
     }
