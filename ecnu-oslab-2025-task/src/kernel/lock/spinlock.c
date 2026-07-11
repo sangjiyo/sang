@@ -1,4 +1,4 @@
-#include "mod.h"
+﻿#include "mod.h"
 
 /*
     开关中断的基本逻辑:
@@ -14,7 +14,7 @@ void push_off(void)
 {
     int old = intr_get();
     intr_off();
-    cpu_t *cpu = mycpu();
+    cpu_t* cpu = mycpu();
     if (cpu->noff == 0)
         cpu->origin = old;
     cpu->noff++;
@@ -23,7 +23,7 @@ void push_off(void)
 // 带层数叠加的开中断
 void pop_off(void)
 {
-    cpu_t *cpu = mycpu();
+    cpu_t* cpu = mycpu();
     assert(intr_get() == 0, "push_off: 1\n"); // 确保此时中断是关闭的
     assert(cpu->noff >= 1, "push_off: 2\n");  // 确保push和pop的对应
     cpu->noff--;
@@ -31,27 +31,49 @@ void pop_off(void)
         intr_on();
 }
 
+// 未持有锁时的cpuid标记 (不能用0, 因为0是合法cpuid)
+#define LOCK_UNUSED (-1)
 
-// 自选锁初始化
-void spinlock_init(spinlock_t *lk, char *name)
+// 自旋锁初始化
+void spinlock_init(spinlock_t* lk, char* name)
 {
-
+    lk->name = name;
+    lk->locked = 0;
+    lk->cpuid = LOCK_UNUSED;
 }
 
 // 是否持有自旋锁
-bool spinlock_holding(spinlock_t *lk)
+bool spinlock_holding(spinlock_t* lk)
 {
+    bool r;
+    r = (lk->locked && lk->cpuid == mycpuid());
+    return r;
 
 }
 
-// 获取自选锁
-void spinlock_acquire(spinlock_t *lk)
+// 获取自旋锁
+void spinlock_acquire(spinlock_t* lk)
 {
-
+    push_off();
+    // TAS带获取语义(acquire). 先竞争锁, 成功后再检查
+    // 避免在TAS之前读lk->locked/lk->cpuid导致的弱内存stale问题
+    while (__sync_lock_test_and_set(&lk->locked, 1) != 0)
+        ;
+    // fence保证TAS结果对后续load可见
+    __sync_synchronize();
+    // 此时已独占该锁, 安全检查递归持有
+    if (spinlock_holding(lk))
+        panic("acquire");
+    lk->cpuid = mycpuid();
 }
 
 // 释放自旋锁
-void spinlock_release(spinlock_t *lk)
+void spinlock_release(spinlock_t* lk)
 {
-
+    if (!spinlock_holding(lk))
+        panic("release");
+    lk->cpuid = LOCK_UNUSED;
+    __sync_synchronize();
+    __sync_lock_release(&lk->locked);
+    pop_off();
 }

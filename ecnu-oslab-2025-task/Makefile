@@ -8,27 +8,31 @@ TARGET = target
 # 定义各模块路径
 KernelPath = src/kernel
 UserPath = src/user
+MKFSPath = src/mkfs
 # 内核链接脚本
 KERNEL_LD  = kernel.ld
 # 定义内核目标文件路径
 ELFKernel = $(TARGET)/kernel/kernel-qemu.elf
 NakedKernel = $(TARGET)/kernel/kernel-qemu.bin
+ELFUser = $(TARGET)/user/initcode.h
+DISKIMG = $(TARGET)/mkfs/disk.img
 
-# 收集内核源代码文件（.c和.S汇编文件）
+# 收集内核代码文件和用户代码文件(.c .S)
 KernelSourceFile = $(wildcard $(KernelPath)/*.c) $(wildcard $(KernelPath)/*.S)
 KernelSourceFile += $(wildcard $(KernelPath)/*/*.c) $(wildcard $(KernelPath)/*/*.S)
-# 收集用户态源代码文件
 UserSourceFile = $(wildcard $(UserPath)/*.c)
 
-# 生成目标文件（.o）路径列表
+# 生成目标文件(.o)路径列表
 KernelOBJ = $(patsubst $(KernelPath)/%.S, $(TARGET)/kernel/%.o, $(filter %.S, $(KernelSourceFile)))
 KernelOBJ += $(patsubst $(KernelPath)/%.c, $(TARGET)/kernel/%.o, $(filter %.c, $(KernelSourceFile)))
 UserOBJ = $(patsubst $(UserPath)/%.c, $(TARGET)/user/%.o, $(filter %.c, $(UserSourceFile)))
 
 # QEMU模拟器配置
 QEMU     = qemu-system-riscv64  # 指定QEMU程序
-QEMUOPTS = -machine virt -bios none -kernel $(TARGET)/kernel/kernel-qemu.elf  # 基础启动参数
+QEMUOPTS = -machine virt -bios none -kernel $(ELFKernel)  # 基础启动参数
 QEMUOPTS += -m 128M -smp $(CPUNUM) -nographic  # 内存、CPU数量及无图形界面配置
+QEMUOPTS += -drive file=$(DISKIMG),if=none,format=raw,id=x0 # 初始磁盘映像
+QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 # 虚拟磁盘设备
 
 # 调试相关配置
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)  # 动态计算GDB端口号
@@ -41,17 +45,6 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
-# 运行目标：先构建再启动QEMU
-run: build
-	$(QEMU) $(QEMUOPTS)
-
-# 调试目标：启动带GDB调试的QEMU
-debug: $(KERN) .gdbinit
-	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
-
-# 构建目标：创建输出目录并编译内核
-build: $(TARGET) $(ELFKernel) 
-
 # 创建输出目录结构（如果不存在）
 .PHONY: $(TARGET)
 $(TARGET):
@@ -61,6 +54,13 @@ ifeq ($(wildcard $(TARGET)),)
 	@mkdir -p $(TARGET)/kernel/boot
 	@mkdir -p $(TARGET)/kernel/lock
 	@mkdir -p $(TARGET)/kernel/lib
+	@mkdir -p $(TARGET)/kernel/mem
+	@mkdir -p $(TARGET)/kernel/trap
+	@mkdir -p $(TARGET)/kernel/proc
+	@mkdir -p $(TARGET)/kernel/syscall
+	@mkdir -p $(TARGET)/kernel/fs
+	@mkdir -p $(TARGET)/user
+	@mkdir -p $(TARGET)/mkfs
 endif
 
 # 编译规则：将汇编文件(.S)编译为目标文件(.o)
@@ -71,15 +71,40 @@ $(TARGET)/kernel/%.o: $(KernelPath)/%.S
 $(TARGET)/kernel/%.o: $(KernelPath)/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-# 编译用户态程序
+# 编译规则：将C文件(.c)编译为目标文件(.o)
 $(TARGET)/user/%.o: $(UserPath)/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -march=rv64g -nostdinc -c -o $@ $<
 
 # 链接生成内核ELF文件
-$(ELFKernel): $(KernelOBJ) $(UserOBJ)
+$(ELFKernel): $(KernelOBJ)
 	$(LD) $(LDFLAGS) -T $(KERNEL_LD) $^ -o $@
+
+# 生成initcode.h
+$(ELFUser): $(UserOBJ)
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $(TARGET)/user/initcode.out $(TARGET)/user/initcode.o
+	$(OBJCOPY) -S -O binary $(TARGET)/user/initcode.out $(TARGET)/user/initcode
+	xxd -i $(TARGET)/user/initcode > $(UserPath)/initcode.h
+
+# 生成disk.img
+$(DISKIMG):
+	gcc -Werror -Wall -I. -o $(TARGET)/mkfs/mkfs $(MKFSPath)/mkfs.c
+	$(TARGET)/mkfs/mkfs $(DISKIMG)
+
+# 构建目标：创建输出目录、编译用户程序、编译内核、生成磁盘映像
+build: $(TARGET) $(ELFUser) $(ELFKernel) $(DISKIMG)
+	@echo "===== make success! ====="
+
+# 运行目标：先构建再启动QEMU
+run: build
+	$(QEMU) $(QEMUOPTS)
+
+# 调试目标：先构建再启动带GDB调试的QEMU
+debug: build .gdbinit
+	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
 # 清理目标：删除输出目录
 .PHONY: clean
 clean:
 	rm -rf target
+	rm -f .gdbinit
+	rm -f $(UserPath)/initcode.h
