@@ -1,4 +1,4 @@
-#include "../arch/mod.h"
+﻿#include "../arch/mod.h"
 
 // 每个CPU在运行操作系统时需要一个初始的函数栈
 __attribute__((aligned(16))) uint8 CPU_stack[4096 * NCPU];
@@ -22,7 +22,8 @@ void start()
     w_mstatus(status);
 
     // 设置M-mode的返回地址
+    w_mepc((uint64)main);
 
     // 触发状态迁移，回到上一个状态（M-mode->S-mode）
-
+    asm volatile("mret");
 }
