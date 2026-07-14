@@ -1,7 +1,7 @@
-/* 标准输出和报错机制 */
+﻿/* 标准输出和报错机制 */
 
 #include "mod.h"
-
+#include <stdarg.h>
 static char digits[] = "0123456789abcdef";
 
 /* printf的自旋锁 */
@@ -59,7 +59,58 @@ static void printptr(uint64 x)
 */
 void printf(const char *fmt, ...)
 {
+    va_list ap;
+    int i, c;
+    char *s;
 
+    //获取锁（防止多个CPU同时打印）
+    spinlock_acquire(&print_lk);
+
+    va_start(ap, fmt);
+    for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
+        if (c != '%') {
+            uart_putc_sync(c);
+            continue;
+        }
+        // 处理 '%'
+        c = fmt[++i] & 0xff;
+        if (c == 0)
+            break;
+        switch (c) {
+        case 'd':
+            printint(va_arg(ap, int), 10, 1);
+            break;
+        case 'p':
+            // 32位无符号十六进制（不带前缀)
+            printint(va_arg(ap, uint32), 16, 0);
+            break;
+        case 'x':
+            // 64位无符号十六进制，带0x前缀
+            printptr(va_arg(ap, uint64));
+            break;
+        case 'c':
+            uart_putc_sync((char)va_arg(ap, int));
+            break;
+        case 's':
+            s = va_arg(ap, char*);
+            if (s == 0)
+                s = "(null)";
+            while (*s)
+                uart_putc_sync(*s++);
+            break;
+        case '%':
+            uart_putc_sync('%');
+            break;
+        default:
+            // 未知格式，原样输出 % 和字符
+            uart_putc_sync('%');
+            uart_putc_sync(c);
+            break;
+        }
+    }
+        va_end(ap);
+
+    spinlock_release(&print_lk);
 }
 
 
@@ -70,6 +121,7 @@ volatile int panicked = 0;
 /* 报错并终止输出 */
 void panic(const char *s)
 {
+
     printf("panic! %s\n", s);
     panicked = 1;
     while (1)
@@ -79,5 +131,7 @@ void panic(const char *s)
 /* 如果不满足条件, 则调用panic */
 void assert(bool condition, const char *warning)
 {
-
+    if(!condition){
+	panic(warning);
+    }
 }
